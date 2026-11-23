@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2Icon, PencilIcon, RefreshCwIcon, SparklesIcon } from "lucide-react";
+import { ArrowsClockwiseIcon, CircleNotchIcon, PencilSimpleIcon, SparkleIcon } from "@phosphor-icons/react/ssr";
 import { toast } from "sonner";
 import { useTRPC, type RouterOutputs } from "@/trpc/react";
 import { AdminPageTitle } from "@/components/admin/page-title";
@@ -79,7 +79,7 @@ function ProviderDialog({ provider, onClose }: { provider: Provider; onClose: ()
             <div className="flex items-center justify-between">
               <Label>Ağ sayfası SEO metni (markdown)</Label>
               <Button size="sm" variant="ghost" disabled={ai.isPending} onClick={() => ai.mutate({ providerId: provider.id })}>
-                {ai.isPending ? <Loader2Icon className="animate-spin" data-icon="inline-start" /> : <SparklesIcon data-icon="inline-start" />}
+                {ai.isPending ? <CircleNotchIcon className="animate-spin" data-icon="inline-start" /> : <SparkleIcon data-icon="inline-start" />}
                 AI ile üret
               </Button>
             </div>
@@ -130,7 +130,7 @@ export default function StationsAdminPage() {
         description="İstasyon verileri Şarjağ API'den çekilip veritabanına yazılır. Cron, SYNC_INTERVAL_HOURS aralığıyla otomatik senkron yapar."
         actions={
           <Button onClick={() => trigger.mutate({})} disabled={running || trigger.isPending}>
-            {running ? <Loader2Icon className="animate-spin" data-icon="inline-start" /> : <RefreshCwIcon data-icon="inline-start" />}
+            {running ? <CircleNotchIcon className="animate-spin" data-icon="inline-start" /> : <ArrowsClockwiseIcon data-icon="inline-start" />}
             {running ? "Senkron sürüyor…" : "Tüm ağları senkronla"}
           </Button>
         }
@@ -215,10 +215,10 @@ export default function StationsAdminPage() {
                     disabled={running}
                     onClick={() => trigger.mutate({ providerIds: [p.id] })}
                   >
-                    <RefreshCwIcon />
+                    <ArrowsClockwiseIcon />
                   </Button>
                   <Button size="icon-sm" variant="ghost" aria-label="Düzenle" onClick={() => setEditing(p)}>
-                    <PencilIcon />
+                    <PencilSimpleIcon />
                   </Button>
                 </TableCell>
               </TableRow>

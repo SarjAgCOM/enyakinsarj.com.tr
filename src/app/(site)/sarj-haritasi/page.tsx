@@ -20,11 +20,11 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function MapPage() {
   const [stats, providers, cities] = await Promise.all([getStats(), listProviders(), getCityTable()]);
   return (
-    <div className="mx-auto max-w-7xl px-4">
+    <div className="container-page">
       <PageHeader
-        crumbs={[{ href: "/sarj-haritasi", label: "Şarj Haritası" }]}
+        crumbs={[{ href: "/sarj-haritasi", label: "Şarj haritası" }]}
         title="Şarj istasyonu haritası"
-        description="Türkiye'deki halka açık elektrikli araç şarj istasyonları tek haritada. Ağa, soket tipine ve güce göre filtreleyin; size en yakın istasyonları görün."
+        description="Türkiye'deki halka açık elektrikli araç şarj istasyonları tek haritada. Ağa, soket tipine ve güce göre filtreleyin, size en yakın istasyonları görün."
       />
       <StatGrid
         items={[
@@ -41,8 +41,8 @@ export default async function MapPage() {
           />
         </Suspense>
       </div>
-      <p className="mt-3 text-xs text-muted-foreground">
-        Veri kaynağı: Şarjağ API · Son güncelleme: {fmtDate(stats.lastSyncedAt)} · Harita: © OpenStreetMap katkıda bulunanlar,
+      <p className="caption-5 mt-3 text-muted-foreground">
+        Veri kaynağı Şarjağ API. Son güncelleme {fmtDate(stats.lastSyncedAt)}. Harita © OpenStreetMap katkıda bulunanlar ve
         OpenFreeMap. Anlık müsaitlik için istasyon sayfasındaki “Anlık doluluk” butonunu kullanın.
       </p>
 
@@ -55,13 +55,13 @@ export default async function MapPage() {
               <Link
                 key={c.slug}
                 href={`/sarj-istasyonlari/${c.slug}`}
-                className="rounded-full border px-3.5 py-1.5 text-sm hover:border-primary/40 hover:text-primary"
+                className="chip"
               >
                 {c.name}
               </Link>
             ))}
-          <Link href="/sarj-istasyonlari" className="px-3.5 py-1.5 text-sm font-medium text-primary">
-            81 il →
+          <Link href="/sarj-istasyonlari" className="chip text-primary">
+            81 ilin tamamı
           </Link>
         </div>
       </Section>
@@ -72,9 +72,9 @@ export default async function MapPage() {
             <Link
               key={p.id}
               href={`/sarj-aglari/${p.slug}`}
-              className="rounded-full border px-3.5 py-1.5 text-sm hover:border-primary/40 hover:text-primary"
+              className="chip"
             >
-              {p.name} <span className="text-muted-foreground">({fmtInt(p.stationCount)})</span>
+              {p.name} <span className="caption-2 tabular-nums text-muted-foreground">{fmtInt(p.stationCount)}</span>
             </Link>
           ))}
         </div>

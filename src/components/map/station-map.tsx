@@ -61,13 +61,21 @@ export function StationMap({ points, color, center, userLocation, focus, fitToPo
       zoom: center?.zoom,
       fitBoundsOptions: { padding: 20 },
       attributionControl: { compact: true },
-      cooperativeGestures: false,
+      // Sayfa kaydırılırken harita tekerleği yakalamasın: yakınlaştırma için Ctrl/⌘ + kaydırma gerekir.
+      cooperativeGestures: true,
+      locale: {
+        "CooperativeGesturesHandler.WindowsHelpText": "Haritayı yakınlaştırmak için Ctrl tuşuna basılı tutup kaydırın",
+        "CooperativeGesturesHandler.MacHelpText": "Haritayı yakınlaştırmak için ⌘ tuşuna basılı tutup kaydırın",
+        "CooperativeGesturesHandler.MobileHelpText": "Haritayı kaydırmak için iki parmağınızı kullanın",
+        "NavigationControl.ZoomIn": "Yakınlaştır",
+        "NavigationControl.ZoomOut": "Uzaklaştır",
+      },
     });
     mapRef.current = map;
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
 
     map.on("load", () => {
-      const primary = color ?? "#16a34a";
+      const primary = color ?? "#0c7a43";
       map.addSource("stations", {
         type: "geojson",
         data: pendingData.current ?? { type: "FeatureCollection", features: [] },
@@ -81,10 +89,10 @@ export function StationMap({ points, color, center, userLocation, focus, fitToPo
         source: "stations",
         filter: ["has", "point_count"],
         paint: {
-          "circle-color": color ?? ["step", ["get", "point_count"], "#22c55e", 50, "#16a34a", 300, "#15803d"],
+          "circle-color": primary,
           "circle-radius": ["step", ["get", "point_count"], 16, 50, 21, 300, 27, 1000, 33],
           "circle-stroke-width": 3,
-          "circle-stroke-color": "rgba(255,255,255,0.85)",
+          "circle-stroke-color": "#ffffff",
         },
       });
       map.addLayer({
@@ -105,7 +113,7 @@ export function StationMap({ points, color, center, userLocation, focus, fitToPo
         source: "stations",
         filter: ["!", ["has", "point_count"]],
         paint: {
-          "circle-color": color ? primary : ["case", ["==", ["get", "dc"], 1], "#16a34a", "#2563eb"],
+          "circle-color": color ? primary : ["case", ["==", ["get", "dc"], 1], "#0c7a43", "#1d5fd1"],
           "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 5, 14, 8, 17, 11],
           "circle-stroke-width": 2,
           "circle-stroke-color": "#ffffff",
@@ -164,7 +172,7 @@ export function StationMap({ points, color, center, userLocation, focus, fitToPo
     if (!map || !userLocation) return;
     if (!userMarker.current) {
       const el = document.createElement("div");
-      el.className = "size-4 rounded-full border-[3px] border-white bg-blue-600 shadow-[0_0_0_6px_rgba(37,99,235,0.25)]";
+      el.className = "size-4 rounded-full border-2 border-white bg-[#1d5fd1] ring-4 ring-[#1d5fd1]/25";
       el.setAttribute("aria-label", "Konumunuz");
       userMarker.current = new maplibregl.Marker({ element: el });
     }

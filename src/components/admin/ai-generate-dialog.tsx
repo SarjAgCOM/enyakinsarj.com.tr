@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { Loader2Icon, SparklesIcon } from "lucide-react";
+import { CircleNotchIcon, SparkleIcon } from "@phosphor-icons/react/ssr";
 import { toast } from "sonner";
 import { useTRPC, type RouterOutputs } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
@@ -46,7 +46,7 @@ export function AiGenerateDialog({
     <Dialog open={open} onOpenChange={(v) => !gen.isPending && setOpen(v)}>
       <DialogTrigger asChild>
         <Button type="button" variant="secondary">
-          <SparklesIcon data-icon="inline-start" /> Yapay zekâ ile yaz
+          <SparkleIcon data-icon="inline-start" /> Yapay zekâ ile yaz
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-xl">
@@ -131,7 +131,7 @@ export function AiGenerateDialog({
               })
             }
           >
-            {gen.isPending ? <Loader2Icon className="animate-spin" data-icon="inline-start" /> : <SparklesIcon data-icon="inline-start" />}
+            {gen.isPending ? <CircleNotchIcon className="animate-spin" data-icon="inline-start" /> : <SparkleIcon data-icon="inline-start" />}
             {gen.isPending ? "Yazılıyor… (1-2 dk sürebilir)" : "Oluştur"}
           </Button>
         </DialogFooter>

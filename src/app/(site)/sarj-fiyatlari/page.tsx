@@ -28,7 +28,7 @@ export default async function PricesPage() {
   const byDc = prices.filter((p) => p.minDcPrice != null);
 
   return (
-    <div className="mx-auto max-w-7xl px-4">
+    <div className="container-page">
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -37,78 +37,78 @@ export default async function PricesPage() {
         }}
       />
       <PageHeader
-        crumbs={[{ href: "/sarj-fiyatlari", label: "Şarj Fiyatları" }]}
+        crumbs={[{ href: "/sarj-fiyatlari", label: "Şarj fiyatları" }]}
         title={`Şarj istasyonu fiyatları (${monthYear()})`}
         description="Şarj ağlarının istasyon verilerinden derlenen en düşük ve en yüksek kWh ücretleri (KDV dahil). DC fiyatları lokasyon ve güce göre değişebilir."
       />
 
-      <div className="overflow-x-auto rounded-xl border">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/60 text-left">
+      <div className="data-table-wrap">
+        <table className="data-table">
+          <thead>
             <tr>
-              <th className="px-4 py-3 font-semibold">Şarj ağı</th>
-              <th className="px-4 py-3 font-semibold">AC (₺/kWh)</th>
-              <th className="px-4 py-3 font-semibold">DC (₺/kWh)</th>
-              <th className="px-4 py-3 font-semibold">100 km DC maliyeti</th>
+              <th>Şarj ağı</th>
+              <th>AC (₺/kWh)</th>
+              <th>DC (₺/kWh)</th>
+              <th>100 km DC maliyeti</th>
             </tr>
           </thead>
           <tbody>
             {prices.map((p) => (
-              <tr key={p.id} className="border-t">
-                <td className="px-4 py-3">
-                  <Link href={`/sarj-aglari/${p.slug}`} className="flex items-center gap-2 font-medium hover:text-primary" title={`${p.name} şarj ücretleri`}>
+              <tr key={p.id}>
+                <td>
+                  <Link href={`/sarj-aglari/${p.slug}`} className="body-5 flex items-center gap-2 hover:text-primary" title={`${p.name} şarj ücretleri`}>
                     <ProviderDot color={p.color} /> {p.name}
                   </Link>
                 </td>
-                <td className="px-4 py-3 tabular-nums">
+                <td className="num">
                   {fmtTl(p.minAcPrice)}
-                  {p.maxAcPrice && p.minAcPrice && p.maxAcPrice > p.minAcPrice ? ` – ${fmtTl(p.maxAcPrice)}` : ""}
+                  {p.maxAcPrice && p.minAcPrice && p.maxAcPrice > p.minAcPrice ? ` ile ${fmtTl(p.maxAcPrice)} arası` : ""}
                 </td>
-                <td className="px-4 py-3 tabular-nums">
+                <td className="num">
                   {fmtTl(p.minDcPrice)}
-                  {p.maxDcPrice && p.minDcPrice && p.maxDcPrice > p.minDcPrice ? ` – ${fmtTl(p.maxDcPrice)}` : ""}
+                  {p.maxDcPrice && p.minDcPrice && p.maxDcPrice > p.minDcPrice ? ` ile ${fmtTl(p.maxDcPrice)} arası` : ""}
                 </td>
-                <td className="px-4 py-3 tabular-nums">{fmtTl(costPer100Km(p.minDcPrice))}</td>
+                <td className="num">{fmtTl(costPer100Km(p.minDcPrice))}</td>
               </tr>
             ))}
             {prices.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-10 text-center text-muted-foreground">
-                  Henüz fiyat verisi yok.
+                <td colSpan={4} className="py-10 text-center text-muted-foreground">
+                  Henüz fiyat verisi yok. İstasyon senkronu tamamlandığında fiyatlar burada listelenir.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
-      <p className="mt-2 text-xs text-muted-foreground">
+      <p className="caption-5 mt-3 text-muted-foreground">
         100 km maliyeti en düşük DC fiyatı ve ortalama {AVG_KWH_PER_100KM} kWh/100 km tüketimle hesaplanır. Son güncelleme:{" "}
         {fmtDate(stats.lastSyncedAt)}. Abonelik paketleri dahil değildir.
       </p>
 
       <div className="grid gap-6 md:grid-cols-2">
         <Section title="En ucuz DC hızlı şarj">
-          <ol className="space-y-2">
+          <ol className="flex flex-col gap-2">
             {byDc.slice(0, 5).map((p, i) => (
-              <li key={p.id} className="flex items-center justify-between rounded-lg border px-4 py-3">
+              <li key={p.id} className="surface-card flex items-center justify-between px-4 py-3">
                 <span className="flex items-center gap-3">
                   <span className="w-5 text-muted-foreground">{i + 1}.</span>
                   <ProviderDot color={p.color} /> {p.name}
                 </span>
-                <span className="font-semibold tabular-nums">{fmtTl(p.minDcPrice)}</span>
+                <span className="body-4 tabular-nums">{fmtTl(p.minDcPrice)}</span>
               </li>
             ))}
           </ol>
         </Section>
         <Section title="En ucuz AC şarj">
-          <ol className="space-y-2">
+          <ol className="flex flex-col gap-2">
             {byAc.slice(0, 5).map((p, i) => (
-              <li key={p.id} className="flex items-center justify-between rounded-lg border px-4 py-3">
+              <li key={p.id} className="surface-card flex items-center justify-between px-4 py-3">
                 <span className="flex items-center gap-3">
                   <span className="w-5 text-muted-foreground">{i + 1}.</span>
                   <ProviderDot color={p.color} /> {p.name}
                 </span>
-                <span className="font-semibold tabular-nums">{fmtTl(p.minAcPrice)}</span>
+                <span className="body-4 tabular-nums">{fmtTl(p.minAcPrice)}</span>
               </li>
             ))}
           </ol>
@@ -118,7 +118,7 @@ export default async function PricesPage() {
       <Section title="Kendi maliyetinizi hesaplayın">
         <p className="text-muted-foreground">
           Aracınızın batarya kapasitesi ve tüketimine göre bir şarjın kaç TL tuttuğunu ve benzine göre tasarrufunuzu{" "}
-          <Link href="/hesaplayicilar/sarj-maliyeti" className="font-medium text-primary underline underline-offset-4">
+          <Link href="/hesaplayicilar/sarj-maliyeti" className="body-2 text-primary underline underline-offset-4">
             şarj maliyeti hesaplayıcısı
           </Link>{" "}
           ile görün.

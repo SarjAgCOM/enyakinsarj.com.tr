@@ -32,7 +32,7 @@ export default async function CityPage({ params }: PageProps<"/sarj-istasyonlari
   const [d, providers] = await Promise.all([getCityDetail(il), listProviders()]);
 
   return (
-    <div className="mx-auto max-w-7xl px-4">
+    <div className="container-page">
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -48,7 +48,7 @@ export default async function CityPage({ params }: PageProps<"/sarj-istasyonlari
       />
       <PageHeader
         crumbs={[
-          { href: "/sarj-istasyonlari", label: "İl İl İstasyonlar" },
+          { href: "/sarj-istasyonlari", label: "İl il istasyonlar" },
           { href: `/sarj-istasyonlari/${il}`, label: province.name },
         ]}
         title={`${province.name} şarj istasyonları`}
@@ -75,27 +75,27 @@ export default async function CityPage({ params }: PageProps<"/sarj-istasyonlari
 
       <div className="grid gap-8 lg:grid-cols-2">
         <Section title={`${locativeKi(province.name)} şarj ağları`}>
-          <div className="overflow-x-auto rounded-xl border">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/60 text-left">
+          <div className="data-table-wrap">
+            <table className="data-table">
+              <thead>
                 <tr>
-                  <th className="px-4 py-3">Ağ</th>
-                  <th className="px-4 py-3 text-right">İstasyon</th>
-                  <th className="px-4 py-3 text-right">DC</th>
-                  <th className="px-4 py-3 text-right">DC kWh</th>
+                  <th>Ağ</th>
+                  <th className="num">İstasyon</th>
+                  <th className="num">DC</th>
+                  <th className="num">DC kWh</th>
                 </tr>
               </thead>
               <tbody>
                 {d.providers.map((p) => (
-                  <tr key={p.id} className="border-t">
-                    <td className="px-4 py-2.5">
+                  <tr key={p.id}>
+                    <td>
                       <Link href={`/sarj-aglari/${p.slug}`} className="flex items-center gap-2 hover:text-primary" title={`${p.name} şarj ücretleri`}>
                         <ProviderDot color={p.color} /> {p.name}
                       </Link>
                     </td>
-                    <td className="px-4 py-2.5 text-right tabular-nums">{fmtInt(p.count)}</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums">{fmtInt(p.dc)}</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums">{fmtTl(p.minDcPrice)}</td>
+                    <td className="num">{fmtInt(p.count)}</td>
+                    <td className="num">{fmtInt(p.dc)}</td>
+                    <td className="num">{fmtTl(p.minDcPrice)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -104,23 +104,23 @@ export default async function CityPage({ params }: PageProps<"/sarj-istasyonlari
         </Section>
 
         <Section title="İlçelere göre istasyonlar">
-          <div className="max-h-[480px] overflow-auto rounded-xl border">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-muted text-left">
+          <div className="data-table-wrap">
+            <table className="data-table">
+              <thead>
                 <tr>
-                  <th className="px-4 py-3">İlçe</th>
-                  <th className="px-4 py-3 text-right">İstasyon</th>
-                  <th className="px-4 py-3 text-right">DC</th>
-                  <th className="px-4 py-3 text-right">En yüksek güç</th>
+                  <th>İlçe</th>
+                  <th className="num">İstasyon</th>
+                  <th className="num">DC</th>
+                  <th className="num">En yüksek güç</th>
                 </tr>
               </thead>
               <tbody>
                 {d.districts.map((x) => (
-                  <tr key={x.slug} className="border-t">
-                    <td className="px-4 py-2.5">{x.name}</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums">{fmtInt(x.count)}</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums">{fmtInt(x.dc)}</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums">{fmtKw(x.maxPowerKw)}</td>
+                  <tr key={x.slug}>
+                    <td>{x.name}</td>
+                    <td className="num">{fmtInt(x.count)}</td>
+                    <td className="num">{fmtInt(x.dc)}</td>
+                    <td className="num">{fmtKw(x.maxPowerKw)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -130,31 +130,31 @@ export default async function CityPage({ params }: PageProps<"/sarj-istasyonlari
       </div>
 
       <Section title={`${locativeKi(province.name)} en hızlı şarj istasyonları`}>
-        <div className="overflow-x-auto rounded-xl border">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/60 text-left">
+        <div className="data-table-wrap">
+          <table className="data-table">
+            <thead>
               <tr>
-                <th className="px-4 py-3">İstasyon</th>
-                <th className="px-4 py-3">Ağ</th>
-                <th className="px-4 py-3">İlçe</th>
-                <th className="px-4 py-3 text-right">Güç</th>
-                <th className="px-4 py-3" />
+                <th>İstasyon</th>
+                <th>Ağ</th>
+                <th>İlçe</th>
+                <th className="num">Güç</th>
+                <th />
               </tr>
             </thead>
             <tbody>
               {d.fastest.map((s) => (
-                <tr key={s.uid} className="border-t">
-                  <td className="px-4 py-2.5">
-                    <Link href={`/istasyon/${s.slug}`} className="font-medium hover:text-primary">
+                <tr key={s.uid}>
+                  <td>
+                    <Link href={`/istasyon/${s.slug}`} className="body-5 hover:text-primary">
                       {s.name}
                     </Link>
                   </td>
-                  <td className="px-4 py-2.5">{s.provider.name}</td>
-                  <td className="px-4 py-2.5">{s.district ?? "—"}</td>
-                  <td className="px-4 py-2.5 text-right tabular-nums">{fmtKw(s.maxPowerKw)}</td>
-                  <td className="px-4 py-2.5 text-right">
+                  <td>{s.provider.name}</td>
+                  <td>{s.district ?? "—"}</td>
+                  <td className="num">{fmtKw(s.maxPowerKw)}</td>
+                  <td className="num">
                     {s.latitude != null && s.longitude != null && (
-                      <a href={directionsUrl(s.latitude, s.longitude)} target="_blank" rel="noopener" className="text-primary hover:underline">
+                      <a href={directionsUrl(s.latitude, s.longitude)} target="_blank" rel="noopener" className="caption-1 text-primary underline-offset-4 hover:underline">
                         Yol tarifi
                       </a>
                     )}

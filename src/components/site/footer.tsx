@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Smartphone } from "lucide-react";
+import { DeviceMobileIcon } from "@phosphor-icons/react/ssr";
 import { site } from "@/lib/site";
 import { Logo } from "./logo";
 import { SarjagAppBadges } from "./app-badges";
@@ -29,6 +29,7 @@ const columns = [
       { href: "/hakkimizda", label: "Hakkımızda" },
       { href: "/iletisim", label: "İletişim" },
       { href: "/gizlilik-politikasi", label: "Gizlilik politikası" },
+      { href: "/kullanim-sartlari", label: "Kullanım şartları" },
       { href: "/blog/rss.xml", label: "RSS" },
     ],
   },
@@ -36,61 +37,78 @@ const columns = [
 
 export function SiteFooter() {
   return (
-    <footer className="mt-20 border-t bg-muted/30">
-      {/* Şarjağ mobil uygulaması */}
-      <section aria-labelledby="sarjag-app" className="border-b">
-        <div className="mx-auto grid max-w-7xl items-center gap-6 px-4 py-10 md:grid-cols-[1fr_auto]">
+    <footer className="mt-24 bg-surface">
+      <div className="container-page flex flex-col gap-12 py-12">
+        {/* Şarjağ mobil uygulaması */}
+        <section
+          aria-labelledby="sarjag-app"
+          className="grid items-center gap-6 rounded-3xl border bg-card p-6 md:grid-cols-[1fr_auto] md:p-8"
+        >
           <div className="flex gap-4">
-            <div className="hidden size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary sm:flex">
-              <Smartphone className="size-6" />
+            <div className="hidden size-12 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground sm:flex">
+              <DeviceMobileIcon className="size-6" />
             </div>
-            <div>
-              <h2 id="sarjag-app" className="text-xl font-semibold tracking-tight">
+            <div className="flex flex-col gap-1">
+              <h2 id="sarjag-app" className="heading-6">
                 Şarjağ mobil uygulamasıyla tüm şarj ağları cebinizde
               </h2>
-              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+              <p className="body-6 max-w-2xl text-muted-foreground">
                 Her şarj noktası tek haritada: anlık soket doluluğu, kWh fiyatları ve rota planlama.{" "}
-                <a href={site.sarjag.url} target="_blank" rel="noopener" className="font-medium text-primary hover:underline">
+                <a
+                  href={site.sarjag.url}
+                  target="_blank"
+                  rel="noopener"
+                  className="body-5 text-primary underline-offset-4 hover:underline"
+                >
                   sarjag.com
                 </a>
               </p>
             </div>
           </div>
           <SarjagAppBadges />
-        </div>
-      </section>
+        </section>
 
-      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 md:grid-cols-[1.4fr_repeat(3,1fr)]">
-        <div className="space-y-3">
-          <Logo />
-          <p className="max-w-sm text-sm text-muted-foreground">
-            Türkiye&apos;deki elektrikli araç şarj istasyonları, şarj ağları ve güncel kWh fiyatları hakkında bağımsız veri ve
-            karşılaştırma platformu. Veriler{" "}
-            <a href="https://console.sarjag.com" target="_blank" rel="noopener" className="underline underline-offset-2">
-              Şarjağ API
-            </a>{" "}
-            üzerinden düzenli olarak güncellenir.
-          </p>
+        <div className="grid gap-10 md:grid-cols-[1.4fr_repeat(3,1fr)]">
+          <div className="flex flex-col gap-4">
+            <Logo />
+            <p className="body-6 max-w-sm text-muted-foreground">
+              Türkiye&apos;deki elektrikli araç şarj istasyonları, şarj ağları ve güncel kWh fiyatları için bağımsız veri ve
+              karşılaştırma platformu. Veriler{" "}
+              <a
+                href="https://console.sarjag.com"
+                target="_blank"
+                rel="noopener"
+                className="text-foreground underline underline-offset-4"
+              >
+                Şarjağ API
+              </a>{" "}
+              üzerinden düzenli olarak güncellenir.
+            </p>
+          </div>
+          {columns.map((col) => (
+            <nav key={col.title} aria-label={col.title} className="flex flex-col gap-3">
+              <h3 className="title-4">{col.title}</h3>
+              <ul className="flex flex-col gap-2">
+                {col.links.map((l) => (
+                  <li key={l.href}>
+                    <Link
+                      href={l.href}
+                      className="body-6 text-muted-foreground transition-colors duration-300 ease-smooth hover:text-foreground"
+                    >
+                      {l.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ))}
         </div>
-        {columns.map((col) => (
-          <nav key={col.title} aria-label={col.title}>
-            <h3 className="mb-3 text-sm font-semibold">{col.title}</h3>
-            <ul className="space-y-2 text-sm">
-              {col.links.map((l) => (
-                <li key={l.href}>
-                  <Link href={l.href} className="text-muted-foreground hover:text-foreground">
-                    {l.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        ))}
-      </div>
-      <div className="border-t">
-        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-6 text-xs text-muted-foreground md:flex-row md:justify-between">
-          <p>© {new Date().getFullYear()} {site.domain}</p>
-          <p>Fiyatlar bilgilendirme amaçlıdır; şarj öncesinde operatörün uygulamasından teyit edin.</p>
+
+        <div className="caption-5 flex flex-col gap-2 text-muted-foreground md:flex-row md:justify-between">
+          <p>
+            © {new Date().getFullYear()} {site.domain}
+          </p>
+          <p>Fiyatlar bilgilendirme amaçlıdır. Şarj öncesinde operatörün uygulamasından teyit edin.</p>
         </div>
       </div>
     </footer>

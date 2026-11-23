@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CopyIcon, Loader2Icon, Trash2Icon, UploadIcon } from "lucide-react";
+import { CircleNotchIcon, CopyIcon, TrashIcon, UploadSimpleIcon } from "@phosphor-icons/react/ssr";
 import { toast } from "sonner";
 import { useTRPC } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
@@ -57,7 +57,7 @@ export function UploadButton({ onUploaded, label = "Görsel yükle" }: { onUploa
         }}
       />
       <Button type="button" variant="outline" onClick={() => input.current?.click()} disabled={busy}>
-        {busy ? <Loader2Icon className="animate-spin" data-icon="inline-start" /> : <UploadIcon data-icon="inline-start" />}
+        {busy ? <CircleNotchIcon className="animate-spin" data-icon="inline-start" /> : <UploadSimpleIcon data-icon="inline-start" />}
         {label}
       </Button>
     </>
@@ -133,7 +133,7 @@ export function MediaGrid({ onPick, selectable }: { onPick?: (m: UploadedMedia) 
                     aria-label="Sil"
                     onClick={() => confirm("Görsel bucket'tan silinsin mi?") && del.mutate({ id: m.id })}
                   >
-                    <Trash2Icon />
+                    <TrashIcon />
                   </Button>
                 </div>
               )}

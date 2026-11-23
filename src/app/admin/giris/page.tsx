@@ -7,13 +7,13 @@ export default async function LoginPage({ searchParams }: PageProps<"/admin/giri
   const sp = await searchParams;
   const next = typeof sp.next === "string" ? sp.next : "/admin";
   return (
-    <main className="flex flex-1 items-center justify-center p-4">
-      <div className="w-full max-w-sm space-y-6 rounded-2xl border bg-card p-8 shadow-sm">
+    <main className="flex flex-1 items-center justify-center bg-surface p-4">
+      <div className="surface-card flex w-full max-w-sm flex-col gap-6 p-8">
         <div className="flex flex-col items-center gap-3 text-center">
           <LogoMark className="size-10" />
           <div>
-            <h1 className="text-xl font-semibold">Yönetim paneli</h1>
-            <p className="text-sm text-muted-foreground">Devam etmek için giriş yapın</p>
+            <h1 className="heading-6">Yönetim paneli</h1>
+            <p className="caption-2 text-muted-foreground">Devam etmek için giriş yapın</p>
           </div>
         </div>
         <LoginForm next={next} />

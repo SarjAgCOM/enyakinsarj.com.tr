@@ -4,6 +4,15 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * Tasarım sistemi
+ * - Tek yazı tipi: Geist (sayısal veri için Geist Mono)
+ * - Yazı boyutları yalnızca Tailwind ölçeğinden; metinler aşağıdaki adlandırılmış stilleri kullanır
+ * - Boşluklar: 0, 2, 4, 8, 12, 16, 24, 32, 40, 48, 64, 80, 96 px
+ * - Köşe yarıçapları Tailwind varsayılanları (lg 8, xl 12, 2xl 16, 3xl 24)
+ * - Arka planlar düz renk; hareketlerde tek eğri: cubic-bezier(0.22, 1, 0.36, 1)
+ */
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -39,118 +48,380 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --color-surface: var(--surface);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+
+  /* Hareket: ağırlıklı, yerine yavaşlayarak oturan tek eğri */
+  --ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+  --default-transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  --default-transition-duration: 300ms;
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.55 0.16 152);
-  --primary-foreground: oklch(0.99 0.01 152);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.96 0.03 152);
-  --accent-foreground: oklch(0.35 0.09 152);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.65 0.15 152);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --radius: 0.5rem;
+  --background: #ffffff;
+  --foreground: #0f1411;
+  --surface: #f6f7f6;
+  --card: #ffffff;
+  --card-foreground: #0f1411;
+  --popover: #ffffff;
+  --popover-foreground: #0f1411;
+  --primary: #0c7a43;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f3f1;
+  --secondary-foreground: #0f1411;
+  --muted: #f1f3f1;
+  --muted-foreground: #5b655f;
+  --accent: #e8f5ee;
+  --accent-foreground: #0a5c33;
+  --destructive: #c8321f;
+  --success: #0c7a43;
+  --warning: #a35f00;
+  --info: #1d5fd1;
+  --border: #e3e7e4;
+  --input: #d5dbd7;
+  --ring: #0c7a43;
+  --chart-1: #0c7a43;
+  --chart-2: #1d5fd1;
+  --chart-3: #a35f00;
+  --chart-4: #7a3fc4;
+  --chart-5: #5b655f;
+  --sidebar: #f6f7f6;
+  --sidebar-foreground: #0f1411;
+  --sidebar-primary: #0c7a43;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e8f5ee;
+  --sidebar-accent-foreground: #0a5c33;
+  --sidebar-border: #e3e7e4;
+  --sidebar-ring: #0c7a43;
+  --hero-from: #000000;
+  --hero-to: #666666;
 }
 
+/* Koyu tema yüzeyleri: #000000 · #181818 · #1F1F1F · #272727 · #313131 */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.72 0.17 152);
-  --primary-foreground: oklch(0.2 0.05 152);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.6 0.15 152);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #181818;
+  --foreground: #f4f6f5;
+  --surface: #1f1f1f;
+  --card: #1f1f1f;
+  --card-foreground: #f4f6f5;
+  --popover: #1f1f1f;
+  --popover-foreground: #f4f6f5;
+  --primary: #3ecf8e;
+  --primary-foreground: #06140c;
+  --secondary: #272727;
+  --secondary-foreground: #f4f6f5;
+  --muted: #272727;
+  --muted-foreground: #a3aaa6;
+  --accent: #272727;
+  --accent-foreground: #7be0b1;
+  --destructive: #ff6b57;
+  --success: #3ecf8e;
+  --warning: #f2b04a;
+  --info: #7aa7ff;
+  --border: #313131;
+  --input: #313131;
+  --ring: #3ecf8e;
+  --chart-1: #3ecf8e;
+  --chart-2: #7aa7ff;
+  --chart-3: #f2b04a;
+  --chart-4: #b796f0;
+  --chart-5: #a3aaa6;
+  --sidebar: #1f1f1f;
+  --sidebar-foreground: #f4f6f5;
+  --sidebar-primary: #3ecf8e;
+  --sidebar-primary-foreground: #06140c;
+  --sidebar-accent: #272727;
+  --sidebar-accent-foreground: #7be0b1;
+  --sidebar-border: #313131;
+  --sidebar-ring: #3ecf8e;
+  --hero-from: #ffffff;
+  --hero-to: #9b9b9b;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
-  button:not(:disabled), [role="button"]:not(:disabled) {
-    cursor: pointer;
-  }
   html {
     @apply font-sans;
+    scroll-behavior: smooth;
   }
-}
-@layer components {
-  /* Blog / SEO içerik tipografisi */
-  .prose-content {
-    @apply text-[15px] leading-7 text-foreground/90 md:text-base md:leading-8;
+  body {
+    @apply bg-background text-base font-normal text-foreground;
   }
-  .prose-content h2 { @apply mt-10 mb-3 text-2xl font-semibold tracking-tight text-foreground; }
-  .prose-content h3 { @apply mt-8 mb-2 text-xl font-semibold text-foreground; }
-  .prose-content p { @apply my-4; }
-  .prose-content a { @apply font-medium text-primary underline underline-offset-4; }
-  .prose-content ul { @apply my-4 list-disc pl-6; }
-  .prose-content ol { @apply my-4 list-decimal pl-6; }
-  .prose-content li { @apply my-1; }
-  .prose-content blockquote { @apply my-6 border-l-4 border-primary/40 pl-4 italic text-muted-foreground; }
-  .prose-content table { @apply my-6 w-full border-collapse text-sm; }
-  .prose-content th { @apply border-b bg-muted px-3 py-2 text-left font-semibold; }
-  .prose-content td { @apply border-b px-3 py-2; }
-  .prose-content img { @apply my-6 rounded-xl; }
-  .prose-content code { @apply rounded bg-muted px-1.5 py-0.5 text-sm; }
-  .prose-content hr { @apply my-8; }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    text-wrap: balance;
+  }
+  p,
+  li,
+  dd,
+  figcaption {
+    text-wrap: pretty;
+  }
+  em,
+  i,
+  cite,
+  address {
+    font-style: normal;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
+  }
+  ::selection {
+    background: color-mix(in oklch, var(--primary) 22%, transparent);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
 }
 
-.maplibregl-popup-content { @apply rounded-xl! p-0! shadow-lg!; }
-.maplibregl-popup-close-button { @apply px-2 text-lg; }
+/* ─────────────────────────── Adlandırılmış yazı stilleri ─────────────────────────── */
+
+@utility heading-1 {
+  @apply text-6xl font-semibold;
+}
+@utility heading-2 {
+  @apply text-5xl font-semibold;
+}
+@utility heading-3 {
+  @apply text-4xl font-semibold;
+}
+@utility heading-4 {
+  @apply text-3xl font-semibold;
+}
+@utility heading-5 {
+  @apply text-2xl font-semibold;
+}
+@utility heading-6 {
+  @apply text-xl font-semibold;
+}
+@utility title-1 {
+  @apply text-xl font-medium;
+}
+@utility title-2 {
+  @apply text-lg font-medium;
+}
+@utility title-3 {
+  @apply text-base font-medium;
+}
+@utility title-4 {
+  @apply text-sm font-medium;
+}
+@utility title-5 {
+  @apply text-xs font-medium;
+}
+@utility body-1 {
+  @apply text-base font-semibold;
+}
+@utility body-2 {
+  @apply text-base font-medium;
+}
+@utility body-3 {
+  @apply text-base font-normal;
+}
+@utility body-4 {
+  @apply text-sm font-semibold;
+}
+@utility body-5 {
+  @apply text-sm font-medium;
+}
+@utility body-6 {
+  @apply text-sm font-normal;
+}
+@utility button-lg {
+  @apply text-lg font-semibold;
+}
+@utility button-md {
+  @apply text-base font-semibold;
+}
+@utility button-sm {
+  @apply text-sm font-semibold;
+}
+@utility button-xsm {
+  @apply text-xs font-semibold;
+}
+@utility caption-1 {
+  @apply text-sm font-medium;
+}
+@utility caption-2 {
+  @apply text-sm font-normal;
+}
+@utility caption-3 {
+  @apply text-xs font-semibold;
+}
+@utility caption-4 {
+  @apply text-xs font-medium;
+}
+@utility caption-5 {
+  @apply text-xs font-normal;
+}
+
+/* Hero başlığı: yalnızca metinde soldan sağa geçiş (arka planlar düz kalır) */
+@utility text-hero {
+  background-image: linear-gradient(to right, var(--hero-from), var(--hero-to));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Sayfa genişliği ve yatay boşluk */
+@utility container-page {
+  @apply mx-auto w-full max-w-7xl px-4 md:px-6;
+}
+
+@layer components {
+  /* Kart yüzeyi */
+  .surface-card {
+    @apply rounded-2xl border bg-card;
+  }
+  .surface-card-interactive {
+    @apply rounded-2xl border bg-card transition-[border-color,transform,box-shadow] duration-300 ease-smooth hover:-translate-y-0.5 hover:border-foreground/25 active:translate-y-0 active:scale-[0.99];
+  }
+
+  /* Veri tabloları */
+  .data-table-wrap {
+    @apply overflow-x-auto rounded-2xl border bg-card;
+  }
+  .data-table {
+    @apply w-full text-left text-sm;
+  }
+  .data-table thead th {
+    @apply bg-surface px-4 py-3 text-xs font-medium text-muted-foreground;
+  }
+  .data-table tbody td {
+    @apply border-t px-4 py-3;
+  }
+  .data-table tbody tr {
+    @apply transition-colors duration-300 hover:bg-surface;
+  }
+  .data-table .num {
+    @apply text-right tabular-nums;
+  }
+
+  /* Etiket çipi */
+  .chip {
+    @apply inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-sm font-medium transition-[border-color,color,background-color] duration-300 hover:border-foreground/25 hover:text-primary active:scale-[0.98];
+  }
+
+  /* Blog / SEO içerik tipografisi */
+  .prose-content {
+    @apply text-base font-normal text-foreground/90;
+  }
+  .prose-content h2 {
+    @apply mt-10 mb-3 scroll-mt-24 text-2xl font-semibold text-foreground;
+  }
+  .prose-content h3 {
+    @apply mt-8 mb-2 scroll-mt-24 text-xl font-semibold text-foreground;
+  }
+  .prose-content p {
+    @apply my-4 leading-7;
+  }
+  .prose-content a {
+    @apply font-medium text-primary underline underline-offset-4;
+  }
+  .prose-content ul {
+    @apply my-4 list-disc pl-6;
+  }
+  .prose-content ol {
+    @apply my-4 list-decimal pl-6;
+  }
+  .prose-content li {
+    @apply my-1 leading-7;
+  }
+  .prose-content blockquote {
+    @apply my-6 rounded-xl border bg-surface px-4 py-3 text-muted-foreground;
+  }
+  .prose-content table {
+    @apply my-6 w-full border-collapse text-sm;
+  }
+  .prose-content th {
+    @apply border-b bg-surface px-3 py-2 text-left font-semibold;
+  }
+  .prose-content td {
+    @apply border-b px-3 py-2;
+  }
+  .prose-content img {
+    @apply my-6 rounded-xl;
+  }
+  .prose-content code {
+    @apply rounded bg-muted px-1 py-0.5 font-mono text-sm;
+  }
+  .prose-content hr {
+    @apply my-8;
+  }
+}
+
+/* ─────────────────────────── Hareket ─────────────────────────── */
+
+/* Kaydırınca beliren bölümler (IntersectionObserver ile bir kez tetiklenir) */
+.reveal {
+  opacity: 0;
+  transform: translateY(32px);
+  transition:
+    opacity 700ms var(--ease-smooth),
+    transform 700ms var(--ease-smooth);
+  will-change: opacity, transform;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* Slogan bölümü: kelimeler sırayla soluk tondan tam renge geçer */
+.tagline-word {
+  opacity: 0.3;
+  transition: opacity 500ms var(--ease-smooth);
+}
+.tagline-word.is-active {
+  opacity: 1;
+}
+
+/* Mobil menü bağlantıları sırayla girer */
+.nav-enter {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 500ms var(--ease-smooth),
+    transform 500ms var(--ease-smooth);
+}
+[data-open="true"] .nav-enter {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .nav-enter {
+    transform: none;
+  }
+  .tagline-word {
+    opacity: 1;
+    transition: none;
+  }
+}
+
+/* ─────────────────────────── Harita ─────────────────────────── */
+
+.maplibregl-map {
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+.maplibregl-ctrl-group {
+  @apply overflow-hidden rounded-xl! border! shadow-none!;
+}
+.maplibregl-ctrl-attrib {
+  @apply text-xs;
+}

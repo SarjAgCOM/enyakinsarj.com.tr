@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PageHeader } from "@/components/site/page-header";
+import { EmptyState, PageHeader } from "@/components/site/page-header";
 import { ProviderDot } from "@/components/site/station-card";
 import { JsonLd } from "@/components/site/json-ld";
 import { listProviders } from "@/server/services/stations";
@@ -24,7 +24,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function ProvidersPage() {
   const providers = await listProviders();
   return (
-    <div className="mx-auto max-w-7xl px-4">
+    <div className="container-page">
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -39,41 +39,39 @@ export default async function ProvidersPage() {
         }}
       />
       <PageHeader
-        crumbs={[{ href: "/sarj-aglari", label: "Şarj Ağları" }]}
+        crumbs={[{ href: "/sarj-aglari", label: "Şarj ağları" }]}
         title="Türkiye'deki şarj ağları"
         description={`${providers.length} şarj ağının istasyon haritaları, hızlı şarj (DC) kapasiteleri ve güncel kWh fiyatları. Bir ağa tıklayarak yalnızca o ağın istasyonlarını haritada görün.`}
       />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {providers.map((p) => (
-          <Link key={p.id} href={`/sarj-aglari/${p.slug}`} className="rounded-2xl border bg-card p-5 transition-colors hover:border-primary/40">
+          <Link key={p.id} href={`/sarj-aglari/${p.slug}`} className="surface-card-interactive flex flex-col gap-4 p-6">
             <div className="flex items-center justify-between gap-2">
-              <h2 className="flex items-center gap-2 text-lg font-semibold">
-                <ProviderDot color={p.color} className="size-3" />
+              <h2 className="heading-6 flex items-center gap-2">
+                <ProviderDot color={p.color} />
                 {p.name}
               </h2>
-              <span className="text-xs text-muted-foreground">en yüksek {fmtKw(p.maxPowerKw)}</span>
+              <span className="caption-5 text-muted-foreground">en yüksek {fmtKw(p.maxPowerKw)}</span>
             </div>
-            <dl className="mt-4 grid grid-cols-3 gap-2 text-sm">
+            <dl className="grid grid-cols-3 gap-2">
               <div>
-                <dt className="text-xs text-muted-foreground">İstasyon</dt>
-                <dd className="font-semibold tabular-nums">{fmtInt(p.stationCount)}</dd>
+                <dt className="caption-5 text-muted-foreground">İstasyon</dt>
+                <dd className="body-4 tabular-nums">{fmtInt(p.stationCount)}</dd>
               </div>
               <div>
-                <dt className="text-xs text-muted-foreground">DC</dt>
-                <dd className="font-semibold tabular-nums">{fmtInt(p.dcStationCount)}</dd>
+                <dt className="caption-5 text-muted-foreground">DC</dt>
+                <dd className="body-4 tabular-nums">{fmtInt(p.dcStationCount)}</dd>
               </div>
               <div>
-                <dt className="text-xs text-muted-foreground">DC kWh</dt>
-                <dd className="font-semibold tabular-nums">{fmtTl(p.minDcPrice)}</dd>
+                <dt className="caption-5 text-muted-foreground">DC kWh</dt>
+                <dd className="body-4 tabular-nums">{fmtTl(p.minDcPrice)}</dd>
               </div>
             </dl>
           </Link>
         ))}
       </div>
       {providers.length === 0 && (
-        <p className="rounded-xl border border-dashed p-10 text-center text-muted-foreground">
-          Henüz şarj ağı verisi yok. Yönetim panelinden Şarjağ senkronunu başlatın.
-        </p>
+        <EmptyState title="Henüz şarj ağı verisi yok">Yönetim panelinden Şarjağ senkronunu başlattığınızda ağlar burada listelenir.</EmptyState>
       )}
     </div>
   );

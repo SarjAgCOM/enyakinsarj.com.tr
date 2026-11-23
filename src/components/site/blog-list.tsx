@@ -1,15 +1,20 @@
 import Link from "next/link";
+import { ArrowLeftIcon, ArrowRightIcon } from "@phosphor-icons/react/ssr";
 import { PostCard } from "@/components/site/post-card";
+import { EmptyState } from "@/components/site/page-header";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+const tab = (active: boolean) =>
+  cn(
+    "chip",
+    active && "border-foreground bg-foreground text-background hover:border-foreground hover:text-background",
+  );
 
 export function CategoryNav({ categories, active }: { categories: { slug: string; name: string; count: number }[]; active?: string }) {
   return (
     <nav aria-label="Kategoriler" className="mb-8 flex flex-wrap gap-2">
-      <Link
-        href="/blog"
-        className={cn("rounded-full border px-3.5 py-1.5 text-sm", !active ? "border-primary bg-primary text-primary-foreground" : "hover:border-primary/40")}
-      >
+      <Link href="/blog" aria-current={!active ? "page" : undefined} className={tab(!active)}>
         Tümü
       </Link>
       {categories
@@ -18,12 +23,10 @@ export function CategoryNav({ categories, active }: { categories: { slug: string
           <Link
             key={c.slug}
             href={`/blog/kategori/${c.slug}`}
-            className={cn(
-              "rounded-full border px-3.5 py-1.5 text-sm",
-              active === c.slug ? "border-primary bg-primary text-primary-foreground" : "hover:border-primary/40",
-            )}
+            aria-current={active === c.slug ? "page" : undefined}
+            className={tab(active === c.slug)}
           >
-            {c.name} <span className="opacity-60">({c.count})</span>
+            {c.name} <span className="caption-2 tabular-nums opacity-60">{c.count}</span>
           </Link>
         ))}
     </nav>
@@ -33,17 +36,15 @@ export function CategoryNav({ categories, active }: { categories: { slug: string
 export function PostGrid({ posts }: { posts: Parameters<typeof PostCard>[0]["post"][] }) {
   if (posts.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed p-12 text-center">
-        <p className="text-muted-foreground">Bu bölümde henüz yazı yok.</p>
-        <div className="mt-4 flex justify-center gap-2">
-          <Button asChild variant="outline">
-            <Link href="/sarj-haritasi">Şarj haritası</Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link href="/hesaplayicilar/sarj-maliyeti">Maliyet hesapla</Link>
-          </Button>
-        </div>
-      </div>
+      <EmptyState title="Bu bölümde henüz yazı yok">
+        <span className="w-full">Yeni rehberler yayınlandığında burada görünecek. O zamana kadar:</span>
+        <Button asChild variant="outline" size="sm">
+          <Link href="/sarj-haritasi">Şarj haritasını aç</Link>
+        </Button>
+        <Button asChild variant="outline" size="sm">
+          <Link href="/hesaplayicilar/sarj-maliyeti">Şarj maliyetini hesapla</Link>
+        </Button>
+      </EmptyState>
     );
   }
   return (
@@ -59,21 +60,21 @@ export function Pagination({ page, pages, base }: { page: number; pages: number;
   if (pages <= 1) return null;
   const href = (p: number) => (p === 1 ? base : `${base}?sayfa=${p}`);
   return (
-    <nav aria-label="Sayfalama" className="mt-10 flex items-center justify-center gap-2">
+    <nav aria-label="Sayfalama" className="mt-10 flex items-center justify-center gap-3">
       {page > 1 && (
-        <Button asChild variant="outline">
+        <Button asChild variant="outline" size="sm">
           <Link href={href(page - 1)} rel="prev">
-            ← Önceki
+            <ArrowLeftIcon data-icon="inline-start" /> Önceki sayfa
           </Link>
         </Button>
       )}
-      <span className="px-3 text-sm text-muted-foreground">
+      <span className="caption-2 tabular-nums text-muted-foreground">
         {page} / {pages}
       </span>
       {page < pages && (
-        <Button asChild variant="outline">
+        <Button asChild variant="outline" size="sm">
           <Link href={href(page + 1)} rel="next">
-            Sonraki →
+            Sonraki sayfa <ArrowRightIcon data-icon="inline-end" />
           </Link>
         </Button>
       )}

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { PencilIcon, Trash2Icon } from "lucide-react";
+import { PencilSimpleIcon, TrashIcon } from "@phosphor-icons/react/ssr";
 import { toast } from "sonner";
 import { useTRPC } from "@/trpc/react";
 import { AdminPageTitle } from "@/components/admin/page-title";
@@ -62,7 +62,7 @@ export default function CategoriesPage() {
                       aria-label="Düzenle"
                       onClick={() => setEditing({ id: c.id, name: c.name, slug: c.slug, description: c.description ?? "" })}
                     >
-                      <PencilIcon />
+                      <PencilSimpleIcon />
                     </Button>
                     <Button
                       size="icon-sm"
@@ -70,7 +70,7 @@ export default function CategoriesPage() {
                       aria-label="Sil"
                       onClick={() => confirm(`"${c.name}" silinsin mi? Yazılar kategorisiz kalır.`) && del.mutate({ id: c.id })}
                     >
-                      <Trash2Icon />
+                      <TrashIcon />
                     </Button>
                   </TableCell>
                 </TableRow>

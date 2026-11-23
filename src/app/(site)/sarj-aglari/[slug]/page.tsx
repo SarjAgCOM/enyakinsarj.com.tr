@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { ExternalLinkIcon } from "lucide-react";
+import { ArrowSquareOutIcon } from "@phosphor-icons/react/ssr";
 import { MapExplorer } from "@/components/map/map-explorer";
 import { PageHeader, Section, StatGrid } from "@/components/site/page-header";
 import { Markdown, extractFaq } from "@/components/site/markdown";
@@ -34,7 +34,7 @@ export default async function ProviderPage({ params }: PageProps<"/sarj-aglari/[
   const faq = p.seoContent ? extractFaq(p.seoContent) : [];
 
   return (
-    <div className="mx-auto max-w-7xl px-4">
+    <div className="container-page">
       <JsonLd
         data={[
           {
@@ -58,7 +58,7 @@ export default async function ProviderPage({ params }: PageProps<"/sarj-aglari/[
       />
       <PageHeader
         crumbs={[
-          { href: "/sarj-aglari", label: "Şarj Ağları" },
+          { href: "/sarj-aglari", label: "Şarj ağları" },
           { href: `/sarj-aglari/${p.slug}`, label: p.name },
         ]}
         title={`${p.name} şarj istasyonları`}
@@ -68,9 +68,9 @@ export default async function ProviderPage({ params }: PageProps<"/sarj-aglari/[
         }
       >
         {p.website && (
-          <Button asChild variant="outline" size="sm">
+          <Button asChild variant="outline" size="sm" className="self-start">
             <a href={p.website} target="_blank" rel="noopener">
-              Resmi web sitesi <ExternalLinkIcon data-icon="inline-end" />
+              Resmi web sitesi <ArrowSquareOutIcon data-icon="inline-end" />
             </a>
           </Button>
         )}
@@ -92,35 +92,35 @@ export default async function ProviderPage({ params }: PageProps<"/sarj-aglari/[
             providers={providers.map((x) => ({ id: x.id, name: x.name, slug: x.slug, color: x.color, stationCount: x.stationCount }))}
           />
         </Suspense>
-        <p className="mt-2 text-xs text-muted-foreground">Son senkron: {fmtDate(p.lastSyncedAt)} · Kaynak: Şarjağ API</p>
+        <p className="caption-5 mt-3 text-muted-foreground">Son senkron {fmtDate(p.lastSyncedAt)}. Kaynak: Şarjağ API.</p>
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
         <div>
           {(p.minAcPrice != null || p.minDcPrice != null) && (
-            <Section title={`${p.name} şarj ücretleri`} subtitle="KDV dahil kWh fiyatları; istasyona göre değişebilir.">
-              <div className="overflow-x-auto rounded-xl border">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/60 text-left">
+            <Section title={`${p.name} şarj ücretleri`} subtitle="KDV dahil kWh fiyatları. İstasyona göre değişebilir.">
+              <div className="data-table-wrap">
+                <table className="data-table">
+                  <thead>
                     <tr>
-                      <th className="px-4 py-3">Tip</th>
-                      <th className="px-4 py-3">En düşük</th>
-                      <th className="px-4 py-3">En yüksek</th>
-                      <th className="px-4 py-3">100 km</th>
+                      <th>Tip</th>
+                      <th>En düşük</th>
+                      <th>En yüksek</th>
+                      <th>100 km</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-t">
-                      <td className="px-4 py-3 font-medium">AC (Type 2)</td>
-                      <td className="px-4 py-3 tabular-nums">{fmtTl(p.minAcPrice)}</td>
-                      <td className="px-4 py-3 tabular-nums">{fmtTl(p.maxAcPrice)}</td>
-                      <td className="px-4 py-3 tabular-nums">{fmtTl(costPer100Km(p.minAcPrice))}</td>
+                    <tr>
+                      <td className="body-5">AC (Type 2)</td>
+                      <td className="num">{fmtTl(p.minAcPrice)}</td>
+                      <td className="num">{fmtTl(p.maxAcPrice)}</td>
+                      <td className="num">{fmtTl(costPer100Km(p.minAcPrice))}</td>
                     </tr>
-                    <tr className="border-t">
-                      <td className="px-4 py-3 font-medium">DC (CCS / CHAdeMO)</td>
-                      <td className="px-4 py-3 tabular-nums">{fmtTl(p.minDcPrice)}</td>
-                      <td className="px-4 py-3 tabular-nums">{fmtTl(p.maxDcPrice)}</td>
-                      <td className="px-4 py-3 tabular-nums">{fmtTl(costPer100Km(p.minDcPrice))}</td>
+                    <tr>
+                      <td className="body-5">DC (CCS, CHAdeMO)</td>
+                      <td className="num">{fmtTl(p.minDcPrice)}</td>
+                      <td className="num">{fmtTl(p.maxDcPrice)}</td>
+                      <td className="num">{fmtTl(costPer100Km(p.minDcPrice))}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -137,9 +137,9 @@ export default async function ProviderPage({ params }: PageProps<"/sarj-aglari/[
 
         <aside className="space-y-6 py-8">
           {p.standards.length > 0 && (
-            <div className="rounded-xl border p-5">
-              <h2 className="font-semibold">Soket tipleri</h2>
-              <ul className="mt-3 space-y-2 text-sm">
+            <div className="surface-card flex flex-col gap-3 p-6">
+              <h2 className="title-3">Soket tipleri</h2>
+              <ul className="body-6 flex flex-col gap-2">
                 {p.standards.map((s) => (
                   <li key={s.standard} className="flex justify-between">
                     <span>{standardLabel(s.standard)}</span>
@@ -149,9 +149,9 @@ export default async function ProviderPage({ params }: PageProps<"/sarj-aglari/[
               </ul>
             </div>
           )}
-          <div className="rounded-xl border p-5">
-            <h2 className="font-semibold">{p.name} istasyonu olan iller</h2>
-            <ul className="mt-3 max-h-96 space-y-1.5 overflow-y-auto text-sm">
+          <div className="surface-card flex flex-col gap-3 p-6">
+            <h2 className="title-3">{p.name} istasyonu olan iller</h2>
+            <ul className="body-6 flex max-h-96 flex-col gap-2 overflow-y-auto">
               {p.cities.map((c) => (
                 <li key={c.slug} className="flex justify-between">
                   <Link href={`/sarj-istasyonlari/${c.slug}`} className="hover:text-primary">

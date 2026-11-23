@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export default async function CostCalculatorPage() {
   const prices = await getPriceTable();
   return (
-    <div className="mx-auto max-w-7xl px-4">
+    <div className="container-page">
       <JsonLd
         data={{
           "@context": "https://schema.org",

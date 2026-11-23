@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2Icon, Loader2Icon, XCircleIcon } from "lucide-react";
+import { CheckCircleIcon, CircleNotchIcon, XCircleIcon } from "@phosphor-icons/react/ssr";
 import { toast } from "sonner";
 import { useTRPC, type RouterOutputs } from "@/trpc/react";
 import { AdminPageTitle } from "@/components/admin/page-title";
@@ -71,7 +71,7 @@ function AccountCard({ account }: { account: Account }) {
           {name}
           {account.hasCredentials ? (
             <Badge variant="secondary">
-              <CheckCircle2Icon data-icon="inline-start" /> {account.accountName ?? "Bağlı"}
+              <CheckCircleIcon data-icon="inline-start" /> {account.accountName ?? "Bağlı"}
             </Badge>
           ) : (
             <Badge variant="outline">Bağlı değil</Badge>
@@ -79,7 +79,7 @@ function AccountCard({ account }: { account: Account }) {
         </CardTitle>
         <CardDescription>{HELP[account.platform]}</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-5">
+      <CardContent className="space-y-6">
         <div className="flex items-center justify-between rounded-lg border p-3">
           <Label htmlFor={`en-${account.platform}`}>Paylaşım etkin</Label>
           <Switch
@@ -141,7 +141,7 @@ function AccountCard({ account }: { account: Account }) {
               )
             }
           >
-            {save.isPending && <Loader2Icon className="animate-spin" data-icon="inline-start" />}
+            {save.isPending && <CircleNotchIcon className="animate-spin" data-icon="inline-start" />}
             Kaydet ve doğrula
           </Button>
           <p className="text-xs text-muted-foreground">Bilgiler veritabanında AES-256-GCM ile şifrelenerek saklanır ve bir daha gösterilmez.</p>
@@ -191,8 +191,8 @@ export default function SocialPage() {
                 </TableCell>
                 <TableCell>
                   {s.status === "SUCCESS" ? (
-                    <span className="flex items-center gap-1.5 text-green-700">
-                      <CheckCircle2Icon className="size-4" />
+                    <span className="flex items-center gap-2 text-green-700">
+                      <CheckCircleIcon className="size-4" />
                       {s.url ? (
                         <a href={s.url} target="_blank" rel="noopener" className="hover:underline">
                           Gönderi
@@ -202,7 +202,7 @@ export default function SocialPage() {
                       )}
                     </span>
                   ) : s.status === "FAILED" ? (
-                    <span className="flex items-center gap-1.5 text-destructive" title={s.error ?? ""}>
+                    <span className="flex items-center gap-2 text-destructive" title={s.error ?? ""}>
                       <XCircleIcon className="size-4" /> <span className="max-w-xs truncate">{s.error}</span>
                     </span>
                   ) : (

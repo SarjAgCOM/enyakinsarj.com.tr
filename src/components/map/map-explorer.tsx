@@ -4,22 +4,21 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { LocateFixedIcon, Loader2Icon, SlidersHorizontalIcon, XIcon } from "lucide-react";
-import { toast } from "sonner";
+import { CrosshairIcon, SlidersHorizontalIcon, XIcon } from "@phosphor-icons/react/ssr";
 import { useTRPC } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StationCard } from "@/components/site/station-card";
+import { StationCard, StationCardSkeleton } from "@/components/site/station-card";
 import { FLAG, type MapProvider } from "@/lib/map-types";
 import { fmtInt } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const StationMap = dynamic(() => import("./station-map").then((m) => m.StationMap), {
   ssr: false,
-  loading: () => <Skeleton className="size-full rounded-none" />,
+  loading: () => <Skeleton className="size-full rounded-lg" />,
 });
 
 const POWER_OPTIONS = [0, 22, 50, 100, 150, 250];
@@ -47,6 +46,7 @@ export function MapExplorer({ providers, providerId, citySlug, center, height = 
   const [selected, setSelected] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(false);
+  const [locError, setLocError] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const pointsQuery = useQuery(
@@ -88,17 +88,18 @@ export function MapExplorer({ providers, providerId, citySlug, center, height = 
 
   const locate = useCallback(() => {
     if (!("geolocation" in navigator)) {
-      toast.error("Tarayıcınız konum özelliğini desteklemiyor.");
+      setLocError("Tarayıcınız konum özelliğini desteklemiyor. İl sayfalarından arayabilirsiniz.");
       return;
     }
     setLocating(true);
+    setLocError(null);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         setLocating(false);
       },
       () => {
-        toast.error("Konumunuza erişilemedi. Tarayıcı izinlerini kontrol edin.");
+        setLocError("Konumunuza erişilemedi. Tarayıcının konum iznini açıp yeniden deneyin.");
         setLocating(false);
       },
       { enableHighAccuracy: true, timeout: 10_000, maximumAge: 60_000 },
@@ -116,9 +117,9 @@ export function MapExplorer({ providers, providerId, citySlug, center, height = 
   const lockedProvider = providerId ? providerMeta.get(providerId) : undefined;
 
   const filters = (
-    <div className="space-y-5">
+    <div className="flex flex-col gap-6">
       {!providerId && (
-        <div className="space-y-2">
+        <div className="flex flex-col gap-2">
           <Label htmlFor="network">Şarj ağı</Label>
           <Select value={network} onValueChange={setNetwork}>
             <SelectTrigger id="network" className="w-full">
@@ -135,8 +136,8 @@ export function MapExplorer({ providers, providerId, citySlug, center, height = 
           </Select>
         </div>
       )}
-      <fieldset className="space-y-2">
-        <legend className="mb-2 text-sm font-medium">Soket</legend>
+      <fieldset className="flex flex-col gap-2">
+        <legend className="title-4 mb-2">Soket</legend>
         {SOCKETS.map((s) => (
           <div key={s.key} className="flex items-center gap-2">
             <Checkbox
@@ -144,13 +145,13 @@ export function MapExplorer({ providers, providerId, citySlug, center, height = 
               checked={(sockets & s.flag) !== 0}
               onCheckedChange={(v) => setSockets((cur) => (v ? cur | s.flag : cur & ~s.flag))}
             />
-            <Label htmlFor={`socket-${s.key}`} className="font-normal">
+            <Label htmlFor={`socket-${s.key}`} className="body-6">
               {s.label}
             </Label>
           </div>
         ))}
       </fieldset>
-      <div className="space-y-2">
+      <div className="flex flex-col gap-2">
         <Label htmlFor="power">En az güç</Label>
         <Select value={String(minPower)} onValueChange={(v) => setMinPower(Number(v))}>
           <SelectTrigger id="power" className="w-full">
@@ -165,23 +166,30 @@ export function MapExplorer({ providers, providerId, citySlug, center, height = 
           </SelectContent>
         </Select>
       </div>
-      <Button onClick={locate} disabled={locating} className="w-full" size="lg">
-        {locating ? <Loader2Icon className="animate-spin" data-icon="inline-start" /> : <LocateFixedIcon data-icon="inline-start" />}
-        Bana en yakın istasyonlar
-      </Button>
-      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+      <div className="flex flex-col gap-2">
+        <Button onClick={locate} disabled={locating} className="w-full">
+          <CrosshairIcon data-icon="inline-start" weight="bold" />
+          {locating ? "Konum alınıyor" : "Bana en yakın istasyonlar"}
+        </Button>
+        {locError && (
+          <p role="alert" className="caption-2 text-destructive">
+            {locError}
+          </p>
+        )}
+      </div>
+      <div className="caption-5 flex items-center gap-4 text-muted-foreground">
         {lockedProvider ? (
-          <span className="flex items-center gap-1.5">
-            <span className="size-2.5 rounded-full" style={{ background: lockedProvider.color ?? "#16a34a" }} />
+          <span className="flex items-center gap-2">
+            <span className="size-2 rounded-full" style={{ background: lockedProvider.color ?? "var(--primary)" }} />
             {lockedProvider.name}
           </span>
         ) : (
           <>
-            <span className="flex items-center gap-1.5">
-              <span className="size-2.5 rounded-full bg-green-600" /> Hızlı (DC)
+            <span className="flex items-center gap-2">
+              <span className="size-2 rounded-full bg-[#0c7a43]" /> Hızlı (DC)
             </span>
-            <span className="flex items-center gap-1.5">
-              <span className="size-2.5 rounded-full bg-blue-600" /> Normal (AC)
+            <span className="flex items-center gap-2">
+              <span className="size-2 rounded-full bg-[#1d5fd1]" /> Normal (AC)
             </span>
           </>
         )}
@@ -190,36 +198,50 @@ export function MapExplorer({ providers, providerId, citySlug, center, height = 
   );
 
   return (
-    <div className="grid overflow-hidden rounded-2xl border bg-card lg:grid-cols-[300px_1fr]">
+    <div className="surface-card grid gap-2 p-2 lg:grid-cols-[288px_1fr]">
       {/* Filtre paneli */}
-      <aside className="border-b lg:border-b-0 lg:border-r">
-        <div className="flex items-center justify-between gap-2 p-4 lg:hidden">
-          <p className="text-sm">
-            <span className="font-semibold tabular-nums">{fmtInt(filtered.length)}</span>{" "}
-            <span className="text-muted-foreground">/ {fmtInt(total)} istasyon</span>
+      <aside className="flex flex-col gap-4 p-2 lg:p-4">
+        <div className="flex items-center justify-between gap-2">
+          <p className="caption-2 text-muted-foreground">
+            <span className="heading-6 tabular-nums text-foreground lg:heading-5">{fmtInt(filtered.length)}</span> /{" "}
+            {fmtInt(total)} istasyon
           </p>
-          <div className="flex gap-2">
+          <div className="flex gap-2 lg:hidden">
             <Button variant="outline" size="sm" onClick={locate} disabled={locating}>
-              <LocateFixedIcon data-icon="inline-start" /> Yakınımda
+              <CrosshairIcon data-icon="inline-start" /> Yakınımda
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setFiltersOpen((v) => !v)} aria-expanded={filtersOpen}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setFiltersOpen((v) => !v)}
+              aria-expanded={filtersOpen}
+              aria-controls="map-filters"
+            >
               <SlidersHorizontalIcon data-icon="inline-start" /> Filtreler
             </Button>
           </div>
         </div>
-        <div className={cn("space-y-4 p-4 pt-0 lg:block lg:pt-4", filtersOpen ? "block" : "hidden")}>
-          <p className="hidden text-sm lg:block">
-            <span className="text-2xl font-semibold tabular-nums">{fmtInt(filtered.length)}</span>{" "}
-            <span className="text-muted-foreground">/ {fmtInt(total)} istasyon gösteriliyor</span>
+        {locError && (
+          <p role="alert" className="caption-2 text-destructive lg:hidden">
+            {locError}
           </p>
+        )}
+        <div id="map-filters" className={cn("lg:block", filtersOpen ? "block" : "hidden")}>
           {filters}
         </div>
         {userLocation && (
-          <div className="max-h-[420px] space-y-2 overflow-y-auto border-t p-4">
-            <h2 className="text-sm font-semibold">Size en yakın istasyonlar</h2>
-            {nearestQuery.isLoading && <Skeleton className="h-24" />}
+          <div className="flex max-h-96 flex-col gap-2 overflow-y-auto">
+            <h2 className="title-4">Size en yakın istasyonlar</h2>
+            {nearestQuery.isLoading && (
+              <>
+                <StationCardSkeleton />
+                <StationCardSkeleton />
+              </>
+            )}
             {nearestQuery.data?.length === 0 && (
-              <p className="text-sm text-muted-foreground">30 km içinde filtrelere uyan istasyon bulunamadı.</p>
+              <p className="body-6 rounded-xl border border-dashed bg-surface p-4 text-muted-foreground">
+                30 km içinde bu filtrelere uyan istasyon yok. Güç veya soket filtresini kaldırıp yeniden deneyin.
+              </p>
             )}
             {nearestQuery.data?.map((s) => (
               <button key={s.uid} type="button" className="block w-full text-left" onClick={() => setSelected(s.uid)}>
@@ -231,7 +253,7 @@ export function MapExplorer({ providers, providerId, citySlug, center, height = 
       </aside>
 
       {/* Harita */}
-      <div className={cn("relative", height)}>
+      <div className={cn("relative overflow-hidden rounded-lg bg-surface", height)}>
         <StationMap
           points={filtered}
           color={lockedProvider?.color}
@@ -247,30 +269,28 @@ export function MapExplorer({ providers, providerId, citySlug, center, height = 
           className="absolute inset-0"
         />
         {pointsQuery.isLoading && (
-          <div className="absolute left-1/2 top-4 -translate-x-1/2 rounded-full bg-background/90 px-3 py-1.5 text-sm shadow">
-            <Loader2Icon className="mr-1.5 inline size-4 animate-spin" />
-            İstasyonlar yükleniyor…
-          </div>
+          <p className="caption-1 absolute left-1/2 top-4 -translate-x-1/2 rounded-full border bg-background px-3 py-1">
+            İstasyonlar yükleniyor
+          </p>
+        )}
+        {pointsQuery.isError && (
+          <p role="alert" className="caption-1 absolute left-1/2 top-4 -translate-x-1/2 rounded-full border bg-background px-3 py-1 text-destructive">
+            İstasyonlar yüklenemedi. Sayfayı yenileyin.
+          </p>
         )}
         {selected && (
-          <div className="absolute inset-x-3 bottom-3 z-10 sm:left-auto sm:right-3 sm:w-96">
+          <div className="absolute inset-x-2 bottom-2 z-10 sm:left-auto sm:w-96">
             <div className="relative">
               <Button
                 variant="secondary"
                 size="icon-sm"
-                className="absolute -right-2 -top-2 z-20 rounded-full shadow"
+                className="absolute -right-1 -top-1 z-20 rounded-full border"
                 onClick={() => setSelected(null)}
-                aria-label="Kapat"
+                aria-label="İstasyon kartını kapat"
               >
                 <XIcon />
               </Button>
-              {selectedQuery.data ? (
-                <div className="shadow-xl">
-                  <StationCard s={selectedQuery.data} />
-                </div>
-              ) : (
-                <Skeleton className="h-36 rounded-xl" />
-              )}
+              {selectedQuery.data ? <StationCard s={selectedQuery.data} /> : <StationCardSkeleton />}
             </div>
           </div>
         )}

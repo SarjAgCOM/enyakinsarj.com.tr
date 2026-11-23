@@ -13,7 +13,7 @@ ve site trafiği Şarjağ'a değil veritabanına gider (token tasarrufu + hız).
 | Uygulama | Next.js 16 (App Router), React 19, TypeScript |
 | API | tRPC v11 + zod v4 (girdi ve Şarjağ yanıt doğrulaması), superjson |
 | Veritabanı | PostgreSQL 17 + Prisma 7 (`@prisma/adapter-pg`) |
-| Arayüz | shadcn/ui (Radix), Tailwind CSS v4, MapLibre GL (OpenFreeMap karoları) |
+| Arayüz | shadcn/ui (Radix), Tailwind CSS v4, Phosphor ikonları, MapLibre GL (OpenFreeMap karoları) |
 | Yapay zekâ | Claude (`@anthropic-ai/sdk`, yapılandırılmış çıktı) |
 | Görseller | Oracle Cloud Object Storage (S3 uyumluluk API'si) |
 | Sosyal medya | X API v2 (OAuth 1.0a), Instagram Graph API |
@@ -42,6 +42,18 @@ ve site trafiği Şarjağ'a değil veritabanına gider (token tasarrufu + hız).
 - Sosyal medya: X ve Instagram hesap bağlama (şifreli saklama), şablonlar, **yayınlanınca otomatik paylaşım**, paylaşım geçmişi
 - Şarj ağları: manuel/otomatik Şarjağ senkronu, ağ düzenleme (renk, logo, AI SEO metni)
 - Kullanıcılar: yönetici/editör rolleri
+
+## Tasarım sistemi
+
+Kurallar `src/app/globals.css` içinde tanımlıdır:
+
+- **Yazı:** tek yazı tipi (Geist). Metinler adlandırılmış stilleri kullanır: `heading-1…6`, `title-1…5`, `body-1…6`,
+  `button-lg/md/sm/xsm`, `caption-1…5`. Serbest `text-*` + `font-*` kombinasyonu yerine bunları kullanın.
+- **Boşluk:** yalnızca 0, 2, 4, 8, 12, 16, 24, 32, 40, 48, 64, 80, 96 px (Tailwind `0.5, 1, 2, 3, 4, 6, 8, 10, 12, 16, 20, 24`).
+- **Yüzeyler:** düz arka planlar, `surface-card` / `surface-card-interactive`, tablolar için `data-table`, etiketler için `chip`.
+- **Hareket:** tek eğri `ease-smooth` (`cubic-bezier(0.22, 1, 0.36, 1)`); `Reveal` (kaydırınca belirme) ve `TaglineReveal` bileşenleri.
+- **Tema:** açık ve koyu tema (`ThemeToggle`); koyu yüzeyler `#181818`, `#1F1F1F`, `#272727`, `#313131`.
+- **İkonlar:** `@phosphor-icons/react/ssr`.
 
 ## Hızlı başlangıç (geliştirme)
 

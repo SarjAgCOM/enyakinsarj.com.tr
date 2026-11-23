@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default function AdminRootLayout({ children }: LayoutProps<"/admin">) {
-  return <div className="flex min-h-svh flex-col bg-muted/30">{children}</div>;
+  return <div className="flex min-h-svh flex-col bg-background">{children}</div>;
 }

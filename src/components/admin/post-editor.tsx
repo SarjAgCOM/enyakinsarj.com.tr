@@ -3,18 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  CalendarClockIcon,
-  ExternalLinkIcon,
-  ImageIcon,
-  Loader2Icon,
-  SaveIcon,
-  SendIcon,
-  Share2Icon,
-  SparklesIcon,
-  Trash2Icon,
-  XIcon,
-} from "lucide-react";
+import { ArrowSquareOutIcon, CalendarCheckIcon, CircleNotchIcon, FloppyDiskIcon, ImageIcon, PaperPlaneTiltIcon, ShareNetworkIcon, SparkleIcon, TrashIcon, XIcon } from "@phosphor-icons/react/ssr";
 import { toast } from "sonner";
 import { useTRPC, type RouterOutputs } from "@/trpc/react";
 import { Badge } from "@/components/ui/badge";
@@ -308,12 +297,12 @@ export function PostEditor({ postId }: { postId?: string }) {
           {status === "PUBLISHED" && post.data && (
             <Button asChild variant="outline">
               <a href={`/blog/${post.data.slug}`} target="_blank" rel="noopener">
-                <ExternalLinkIcon data-icon="inline-start" /> Görüntüle
+                <ArrowSquareOutIcon data-icon="inline-start" /> Görüntüle
               </a>
             </Button>
           )}
           <Button variant="outline" onClick={save} disabled={saving}>
-            {saving ? <Loader2Icon className="animate-spin" data-icon="inline-start" /> : <SaveIcon data-icon="inline-start" />}
+            {saving ? <CircleNotchIcon className="animate-spin" data-icon="inline-start" /> : <FloppyDiskIcon data-icon="inline-start" />}
             Kaydet
           </Button>
           {postId &&
@@ -332,7 +321,7 @@ export function PostEditor({ postId }: { postId?: string }) {
                 }}
                 disabled={publish.isPending}
               >
-                {publish.isPending ? <Loader2Icon className="animate-spin" data-icon="inline-start" /> : <SendIcon data-icon="inline-start" />}
+                {publish.isPending ? <CircleNotchIcon className="animate-spin" data-icon="inline-start" /> : <PaperPlaneTiltIcon data-icon="inline-start" />}
                 Yayınla
               </Button>
             ))}
@@ -343,7 +332,7 @@ export function PostEditor({ postId }: { postId?: string }) {
         {/* Ana içerik */}
         <div className="space-y-6">
           <Card>
-            <CardContent className="space-y-4 pt-6">
+            <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="title">Başlık</Label>
                 <Input
@@ -373,7 +362,7 @@ export function PostEditor({ postId }: { postId?: string }) {
           </Card>
 
           <Card>
-            <CardContent className="pt-6">
+            <CardContent>
               <Tabs defaultValue="write">
                 <div className="flex items-center justify-between">
                   <TabsList>
@@ -470,7 +459,7 @@ export function PostEditor({ postId }: { postId?: string }) {
                 disabled={seoAi.isPending || form.content.length < 50}
                 onClick={() => seoAi.mutate({ title: form.title, content: form.content })}
               >
-                {seoAi.isPending ? <Loader2Icon className="animate-spin" data-icon="inline-start" /> : <SparklesIcon data-icon="inline-start" />}
+                {seoAi.isPending ? <CircleNotchIcon className="animate-spin" data-icon="inline-start" /> : <SparkleIcon data-icon="inline-start" />}
                 AI ile doldur
               </Button>
             </CardHeader>
@@ -511,7 +500,7 @@ export function PostEditor({ postId }: { postId?: string }) {
                 disabled={socialAi.isPending || form.content.length < 50}
                 onClick={() => socialAi.mutate({ title: form.title, excerpt: form.excerpt, content: form.content })}
               >
-                {socialAi.isPending ? <Loader2Icon className="animate-spin" data-icon="inline-start" /> : <SparklesIcon data-icon="inline-start" />}
+                {socialAi.isPending ? <CircleNotchIcon className="animate-spin" data-icon="inline-start" /> : <SparkleIcon data-icon="inline-start" />}
                 AI ile yaz
               </Button>
             </CardHeader>
@@ -560,18 +549,18 @@ export function PostEditor({ postId }: { postId?: string }) {
                     disabled={share.isPending || !sharePlatforms.length || dirty}
                     onClick={() => share.mutate({ id: postId, platforms: sharePlatforms })}
                   >
-                    {share.isPending ? <Loader2Icon className="animate-spin" data-icon="inline-start" /> : <Share2Icon data-icon="inline-start" />}
+                    {share.isPending ? <CircleNotchIcon className="animate-spin" data-icon="inline-start" /> : <ShareNetworkIcon data-icon="inline-start" />}
                     Paylaş
                   </Button>
                 </div>
               )}
 
               {post.data?.socialPosts.length ? (
-                <ul className="space-y-1.5 text-xs">
+                <ul className="space-y-2 text-xs">
                   {post.data.socialPosts.map((s) => (
                     <li key={s.id} className="flex items-center justify-between gap-2">
                       <span>
-                        <Badge variant={s.status === "SUCCESS" ? "secondary" : "destructive"} className="mr-1.5">
+                        <Badge variant={s.status === "SUCCESS" ? "secondary" : "destructive"} className="mr-2">
                           {s.platform === "X" ? "X" : "IG"}
                         </Badge>
                         {s.status === "SUCCESS" ? (
@@ -609,7 +598,7 @@ export function PostEditor({ postId }: { postId?: string }) {
                   disabled={!scheduleAt || schedule.isPending || dirty}
                   onClick={() => schedule.mutate({ id: postId, publishAt: new Date(scheduleAt) })}
                 >
-                  <CalendarClockIcon data-icon="inline-start" /> Planla
+                  <CalendarCheckIcon data-icon="inline-start" /> Planla
                 </Button>
                 <p className="text-xs text-muted-foreground">Zamanı gelince cron yayınlar ve otomatik paylaşım açıksa sosyal medyada paylaşır.</p>
               </CardContent>
@@ -622,7 +611,7 @@ export function PostEditor({ postId }: { postId?: string }) {
               className="w-full"
               onClick={() => confirm("Yazı kalıcı olarak silinsin mi?") && remove.mutate({ id: postId })}
             >
-              <Trash2Icon data-icon="inline-start" /> Yazıyı sil
+              <TrashIcon data-icon="inline-start" /> Yazıyı sil
             </Button>
           )}
         </div>

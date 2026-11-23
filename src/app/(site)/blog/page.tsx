@@ -20,7 +20,7 @@ export default async function BlogPage({ searchParams }: PageProps<"/blog">) {
   const page = Math.max(1, Number(sp.sayfa) || 1);
   const [posts, categories] = await Promise.all([listPublishedPosts({ page }), listCategoriesWithCounts()]);
   return (
-    <div className="mx-auto max-w-7xl px-4">
+    <div className="container-page">
       <PageHeader
         crumbs={[{ href: "/blog", label: "Blog" }]}
         title="Elektrikli araç blogu"

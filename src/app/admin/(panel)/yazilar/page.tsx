@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { PlusIcon, SparklesIcon } from "lucide-react";
+import { PlusIcon, SparkleIcon } from "@phosphor-icons/react/ssr";
 import { useTRPC } from "@/trpc/react";
 import { AdminPageTitle } from "@/components/admin/page-title";
 import { Badge } from "@/components/ui/badge";
@@ -67,7 +67,7 @@ export default function PostsPage() {
                   <Link href={`/admin/yazilar/${p.id}`} className="font-medium hover:text-primary">
                     {p.title}
                   </Link>
-                  {p.aiGenerated && <SparklesIcon className="ml-1.5 inline size-3.5 text-primary" aria-label="Yapay zekâ ile üretildi" />}
+                  {p.aiGenerated && <SparkleIcon className="ml-2 inline size-3.5 text-primary" aria-label="Yapay zekâ ile üretildi" />}
                 </TableCell>
                 <TableCell>
                   <Badge variant={p.status === "PUBLISHED" ? "default" : p.status === "SCHEDULED" ? "secondary" : "outline"}>

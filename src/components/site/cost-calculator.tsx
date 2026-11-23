@@ -64,7 +64,7 @@ export function CostCalculator({ providers }: { providers: ProviderPrice[] }) {
           </div>
           <div className="space-y-3 sm:col-span-2">
             <Label>
-              Şarj aralığı: %{range[0]} → %{range[1]}
+              Şarj aralığı: %{range[0]} ile %{range[1]} arası
             </Label>
             <Slider value={range} min={0} max={100} step={5} onValueChange={(v) => setRange([v[0], v[1]] as [number, number])} />
           </div>
@@ -125,36 +125,36 @@ export function CostCalculator({ providers }: { providers: ProviderPrice[] }) {
         </CardContent>
       </Card>
 
-      <Card className="h-fit bg-primary text-primary-foreground lg:sticky lg:top-20" aria-live="polite">
+      <Card className="h-fit bg-primary text-primary-foreground lg:sticky lg:top-24" aria-live="polite">
         <CardHeader>
           <CardTitle className="text-primary-foreground/80">Tahmini şarj maliyeti</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-5">
-          <p className="text-5xl font-bold tabular-nums">{fmtTl(r.cost)}</p>
-          <dl className="grid grid-cols-2 gap-4 text-sm">
+        <CardContent className="space-y-6">
+          <p className="heading-2 tabular-nums">{fmtTl(r.cost)}</p>
+          <dl className="caption-2 grid grid-cols-2 gap-4">
             <div>
               <dt className="opacity-75">Bataryaya giren</dt>
-              <dd className="text-lg font-semibold tabular-nums">{r.kwh.toFixed(1)} kWh</dd>
+              <dd className="title-2 tabular-nums">{r.kwh.toFixed(1)} kWh</dd>
             </div>
             <div>
               <dt className="opacity-75">Şebekeden çekilen</dt>
-              <dd className="text-lg font-semibold tabular-nums">{r.gridKwh.toFixed(1)} kWh</dd>
+              <dd className="title-2 tabular-nums">{r.gridKwh.toFixed(1)} kWh</dd>
             </div>
             <div>
               <dt className="opacity-75">Kazanılan menzil</dt>
-              <dd className="text-lg font-semibold tabular-nums">≈ {Math.round(r.km)} km</dd>
+              <dd className="title-2 tabular-nums">yaklaşık {Math.round(r.km)} km</dd>
             </div>
             <div>
               <dt className="opacity-75">100 km maliyeti</dt>
-              <dd className="text-lg font-semibold tabular-nums">{fmtTl(r.per100)}</dd>
+              <dd className="title-2 tabular-nums">{fmtTl(r.per100)}</dd>
             </div>
           </dl>
-          <div className="rounded-xl bg-primary-foreground/10 p-4 text-sm">
+          <div className="body-6 rounded-xl bg-primary-foreground/10 p-4">
             Benzinli araçla 100 km: <strong>{fmtTl(r.fuel100)}</strong>
             <br />
             {r.saving >= 0 ? "Tasarruf" : "Fark"}: <strong>{fmtTl(Math.abs(r.saving))}</strong> / 100 km
           </div>
-          <p className="text-xs opacity-75">
+          <p className="caption-5 opacity-75">
             Hesaplama, {type} şarjda %{type === "DC" ? 8 : 12} şarj kaybı varsayar. Fiyat: {fmtTl(price)}/kWh.
           </p>
         </CardContent>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangleIcon, CheckCircle2Icon, PlusIcon, XCircleIcon } from "lucide-react";
+import { CheckCircleIcon, PlusIcon, WarningIcon, XCircleIcon } from "@phosphor-icons/react/ssr";
 import { useTRPC } from "@/trpc/react";
 import { AdminPageTitle } from "@/components/admin/page-title";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +14,7 @@ import { fmtDateTime, fmtInt } from "@/lib/format";
 function Check({ ok, label, hint }: { ok: boolean; label: string; hint: string }) {
   return (
     <li className="flex items-start gap-2 text-sm">
-      {ok ? <CheckCircle2Icon className="mt-0.5 size-4 text-green-600" /> : <AlertTriangleIcon className="mt-0.5 size-4 text-amber-500" />}
+      {ok ? <CheckCircleIcon className="mt-0.5 size-4 text-green-600" /> : <WarningIcon className="mt-0.5 size-4 text-amber-500" />}
       <span>
         <span className="font-medium">{label}</span>
         {!ok && <span className="block text-xs text-muted-foreground">{hint}</span>}
@@ -136,7 +136,7 @@ export default function DashboardPage() {
                   <li key={s.id} className="flex items-center justify-between gap-3 py-2">
                     <span className="flex min-w-0 items-center gap-2">
                       {s.status === "SUCCESS" ? (
-                        <CheckCircle2Icon className="size-4 shrink-0 text-green-600" />
+                        <CheckCircleIcon className="size-4 shrink-0 text-green-600" />
                       ) : (
                         <XCircleIcon className="size-4 shrink-0 text-destructive" />
                       )}

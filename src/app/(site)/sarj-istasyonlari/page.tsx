@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { SearchIcon } from "lucide-react";
+import { MagnifyingGlassIcon } from "@phosphor-icons/react/ssr";
 import { PageHeader, Section } from "@/components/site/page-header";
 import { StationCard } from "@/components/site/station-card";
 import { Input } from "@/components/ui/input";
@@ -23,9 +23,9 @@ export default async function CitiesPage({ searchParams }: PageProps<"/sarj-ista
   const total = cities.reduce((a, c) => a + c.count, 0);
 
   return (
-    <div className="mx-auto max-w-7xl px-4">
+    <div className="container-page">
       <PageHeader
-        crumbs={[{ href: "/sarj-istasyonlari", label: "İl İl İstasyonlar" }]}
+        crumbs={[{ href: "/sarj-istasyonlari", label: "İl il istasyonlar" }]}
         title="İl il şarj istasyonları"
         description={`Türkiye genelinde ${fmtInt(total)} halka açık şarj istasyonunun illere göre dağılımı.`}
       >
@@ -33,9 +33,9 @@ export default async function CitiesPage({ searchParams }: PageProps<"/sarj-ista
           <label htmlFor="q" className="sr-only">
             İstasyon, ilçe veya adres ara
           </label>
-          <Input id="q" name="q" defaultValue={q} placeholder="İstasyon adı, ilçe veya adres ara" className="h-10" />
-          <Button type="submit" size="lg" className="h-10">
-            <SearchIcon data-icon="inline-start" /> Ara
+          <Input id="q" name="q" defaultValue={q} placeholder="İstasyon adı, ilçe veya adres ara" />
+          <Button type="submit">
+            <MagnifyingGlassIcon data-icon="inline-start" weight="bold" /> İstasyon ara
           </Button>
         </form>
       </PageHeader>
@@ -50,27 +50,27 @@ export default async function CitiesPage({ searchParams }: PageProps<"/sarj-ista
         </Section>
       )}
 
-      <div className="overflow-x-auto rounded-xl border">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/60 text-left">
+      <div className="data-table-wrap">
+        <table className="data-table">
+          <thead>
             <tr>
-              <th className="px-4 py-3">Plaka</th>
-              <th className="px-4 py-3">İl</th>
-              <th className="px-4 py-3 text-right">İstasyon</th>
-              <th className="px-4 py-3 text-right">Hızlı şarj (DC)</th>
+              <th>Plaka</th>
+              <th>İl</th>
+              <th className="num">İstasyon</th>
+              <th className="num">Hızlı şarj (DC)</th>
             </tr>
           </thead>
           <tbody>
             {cities.map((c) => (
-              <tr key={c.slug} className="border-t">
-                <td className="px-4 py-2.5 tabular-nums text-muted-foreground">{String(c.plate).padStart(2, "0")}</td>
-                <td className="px-4 py-2.5">
-                  <Link href={`/sarj-istasyonlari/${c.slug}`} className="font-medium hover:text-primary">
+              <tr key={c.slug}>
+                <td className="tabular-nums text-muted-foreground">{String(c.plate).padStart(2, "0")}</td>
+                <td>
+                  <Link href={`/sarj-istasyonlari/${c.slug}`} className="body-5 hover:text-primary">
                     {c.name} şarj istasyonları
                   </Link>
                 </td>
-                <td className="px-4 py-2.5 text-right tabular-nums">{fmtInt(c.count)}</td>
-                <td className="px-4 py-2.5 text-right tabular-nums">{fmtInt(c.dc)}</td>
+                <td className="num">{fmtInt(c.count)}</td>
+                <td className="num">{fmtInt(c.dc)}</td>
               </tr>
             ))}
           </tbody>

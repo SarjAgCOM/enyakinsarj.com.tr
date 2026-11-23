@@ -26,7 +26,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps<"
   if (!cat) notFound();
   const posts = await listPublishedPosts({ page, categorySlug: slug });
   return (
-    <div className="mx-auto max-w-7xl px-4">
+    <div className="container-page">
       <PageHeader
         crumbs={[
           { href: "/blog", label: "Blog" },

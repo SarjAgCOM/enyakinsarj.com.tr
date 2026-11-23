@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { MapPinIcon, NavigationIcon, ZapIcon } from "lucide-react";
+import { LightningIcon, MapPinIcon, NavigationArrowIcon } from "@phosphor-icons/react/ssr";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader, Section, StatGrid } from "@/components/site/page-header";
@@ -39,7 +39,7 @@ export default async function StationPage({ params }: PageProps<"/istasyon/[slug
   const place = [s.district, s.city].filter(Boolean).join(", ");
 
   return (
-    <div className="mx-auto max-w-7xl px-4">
+    <div className="container-page">
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -70,7 +70,7 @@ export default async function StationPage({ params }: PageProps<"/istasyon/[slug
         ]}
         title={s.name}
         description={
-          <span className="flex items-start gap-1.5">
+          <span className="flex items-start gap-2">
             <MapPinIcon className="mt-1 size-4 shrink-0" />
             {[s.address, place].filter(Boolean).join(" · ") || "Adres bilgisi yok"}
           </span>
@@ -86,9 +86,9 @@ export default async function StationPage({ params }: PageProps<"/istasyon/[slug
           {s.access && <Badge variant="outline">{s.access === "PUBLIC" ? "Herkese açık" : s.access}</Badge>}
         </div>
         {s.latitude != null && s.longitude != null && (
-          <Button asChild size="lg">
+          <Button asChild className="self-start">
             <a href={directionsUrl(s.latitude, s.longitude)} target="_blank" rel="noopener">
-              <NavigationIcon data-icon="inline-start" /> Yol tarifi al
+              <NavigationArrowIcon data-icon="inline-start" weight="fill" /> Yol tarifi al
             </a>
           </Button>
         )}
@@ -106,37 +106,37 @@ export default async function StationPage({ params }: PageProps<"/istasyon/[slug
       <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
         <div>
           <Section title="Soketler">
-            <div className="overflow-x-auto rounded-xl border">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/60 text-left">
+            <div className="data-table-wrap">
+              <table className="data-table">
+                <thead>
                   <tr>
-                    <th className="px-4 py-3">Soket</th>
-                    <th className="px-4 py-3">Tip</th>
-                    <th className="px-4 py-3">Güç</th>
-                    <th className="px-4 py-3">Fiyat</th>
-                    <th className="px-4 py-3">Son durum</th>
+                    <th>Soket</th>
+                    <th>Tip</th>
+                    <th>Güç</th>
+                    <th>Fiyat</th>
+                    <th>Son durum</th>
                   </tr>
                 </thead>
                 <tbody>
                   {connectors.map((c) => (
-                    <tr key={c.uid} className="border-t">
-                      <td className="px-4 py-2.5 font-mono text-xs">{c.evseId ?? c.code ?? c.uid.split(":").pop()}</td>
-                      <td className="px-4 py-2.5">{standardLabel(c.standard)}</td>
-                      <td className="px-4 py-2.5 tabular-nums">
-                        <ZapIcon className="mr-1 inline size-3.5 text-primary" />
+                    <tr key={c.uid}>
+                      <td className="caption-5 font-mono">{c.evseId ?? c.code ?? c.uid.split(":").pop()}</td>
+                      <td>{standardLabel(c.standard)}</td>
+                      <td className="num">
+                        <LightningIcon className="mr-1 inline size-3.5 text-primary" />
                         {fmtKw(c.maxPowerKw)} {c.powerType}
                       </td>
-                      <td className="px-4 py-2.5 tabular-nums">
+                      <td className="num">
                         {c.price?.energyPerKwh != null ? `${fmtTl(c.price.energyPerKwh)}/kWh` : "—"}
                       </td>
-                      <td className="px-4 py-2.5 text-muted-foreground">{STATUS_LABELS[c.status] ?? c.status}</td>
+                      <td className="text-muted-foreground">{STATUS_LABELS[c.status] ?? c.status}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <p className="mt-2 text-xs text-muted-foreground">
-              “Son durum” senkron anındaki durumdur ({fmtDateTime(s.syncedAt)}). Güncel doluluk için aşağıdaki butonu kullanın.
+            <p className="caption-5 mt-3 text-muted-foreground">
+              “Son durum” sütunu {fmtDateTime(s.syncedAt)} tarihli senkrondaki durumu gösterir. Güncel doluluk için aşağıdaki butonu kullanın.
             </p>
           </Section>
 
@@ -150,14 +150,14 @@ export default async function StationPage({ params }: PageProps<"/istasyon/[slug
             <Section title="Tarifeler">
               <ul className="grid gap-2 sm:grid-cols-2">
                 {prices.map((p, i) => (
-                  <li key={p.tariffId ?? i} className="rounded-lg border px-4 py-3 text-sm">
-                    <p className="font-medium">
+                  <li key={p.tariffId ?? i} className="surface-card flex flex-col gap-1 px-4 py-3">
+                    <p className="body-5">
                       {p.label ?? `${p.powerType ?? ""} tarife`}{" "}
                       {p.audience && p.audience !== "ALL" && (
                         <span className="text-muted-foreground">({p.audience === "MEMBER" ? "üye" : "misafir"})</span>
                       )}
                     </p>
-                    <p className="mt-1 tabular-nums text-muted-foreground">
+                    <p className="caption-2 tabular-nums text-muted-foreground">
                       {p.energyPerKwh != null && <>{fmtTl(p.energyPerKwh)}/kWh </>}
                       {p.timePerMinute != null && p.timePerMinute > 0 && <>· {fmtTl(p.timePerMinute)}/dk </>}
                       {p.sessionFee != null && p.sessionFee > 0 && <>· oturum {fmtTl(p.sessionFee)} </>}
@@ -172,8 +172,8 @@ export default async function StationPage({ params }: PageProps<"/istasyon/[slug
 
         <aside className="py-8">
           {nearby.length > 0 && (
-            <div className="space-y-3">
-              <h2 className="text-lg font-semibold">Yakındaki diğer istasyonlar</h2>
+            <div className="flex flex-col gap-3">
+              <h2 className="heading-6">Yakındaki diğer istasyonlar</h2>
               {nearby.map((n) => (
                 <StationCard key={n.uid} s={n} compact />
               ))}

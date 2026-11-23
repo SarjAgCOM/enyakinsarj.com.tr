@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRightIcon } from "lucide-react";
+import { CaretRightIcon } from "@phosphor-icons/react/ssr";
 import { absoluteUrl } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import { JsonLd } from "./json-ld";
@@ -10,20 +10,20 @@ export interface Crumb {
 }
 
 export function Breadcrumbs({ items }: { items: Crumb[] }) {
-  const all = [{ href: "/", label: "Ana Sayfa" }, ...items];
+  const all = [{ href: "/", label: "Ana sayfa" }, ...items];
   return (
     <>
-      <nav aria-label="Sayfa yolu" className="text-sm text-muted-foreground">
+      <nav aria-label="Sayfa yolu" className="caption-2 text-muted-foreground">
         <ol className="flex flex-wrap items-center gap-1">
           {all.map((c, i) => (
             <li key={c.href} className="flex items-center gap-1">
-              {i > 0 && <ChevronRightIcon className="size-3.5 opacity-60" />}
+              {i > 0 && <CaretRightIcon aria-hidden className="size-3 opacity-60" />}
               {i === all.length - 1 ? (
                 <span aria-current="page" className="text-foreground">
                   {c.label}
                 </span>
               ) : (
-                <Link href={c.href} className="hover:text-foreground">
+                <Link href={c.href} className="transition-colors duration-300 ease-smooth hover:text-foreground">
                   {c.label}
                 </Link>
               )}
@@ -61,10 +61,10 @@ export function PageHeader({
   className?: string;
 }) {
   return (
-    <div className={cn("space-y-3 pb-6 pt-8", className)}>
+    <div className={cn("flex flex-col gap-4 pb-8 pt-6", className)}>
       {crumbs && <Breadcrumbs items={crumbs} />}
-      <h1 className="text-3xl font-bold tracking-tight text-balance md:text-4xl">{title}</h1>
-      {description && <p className="max-w-3xl text-base text-muted-foreground md:text-lg">{description}</p>}
+      <h1 className="heading-4 max-w-3xl md:heading-3">{title}</h1>
+      {description && <div className="body-3 max-w-2xl text-muted-foreground">{description}</div>}
       {children}
     </div>
   );
@@ -86,13 +86,13 @@ export function Section({
   id?: string;
 }) {
   return (
-    <section className={cn("py-8", className)} aria-labelledby={id}>
-      <div className="mb-5 flex items-end justify-between gap-4">
-        <div>
-          <h2 id={id} className="text-2xl font-semibold tracking-tight">
+    <section className={cn("py-10", className)} aria-labelledby={id}>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <h2 id={id} className="heading-5">
             {title}
           </h2>
-          {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
+          {subtitle && <p className="caption-2 max-w-2xl text-muted-foreground">{subtitle}</p>}
         </div>
         {action}
       </div>
@@ -103,14 +103,24 @@ export function Section({
 
 export function StatGrid({ items }: { items: { label: string; value: React.ReactNode; hint?: string }[] }) {
   return (
-    <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">
+    <dl className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
       {items.map((s) => (
-        <div key={s.label} className="rounded-xl border bg-card p-4">
-          <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{s.label}</dt>
-          <dd className="mt-1 text-2xl font-semibold tabular-nums">{s.value}</dd>
-          {s.hint && <dd className="mt-0.5 text-xs text-muted-foreground">{s.hint}</dd>}
+        <div key={s.label} className="surface-card flex flex-col gap-1 p-4 md:p-6">
+          <dt className="caption-4 text-muted-foreground">{s.label}</dt>
+          <dd className="heading-5 tabular-nums md:heading-4">{s.value}</dd>
+          {s.hint && <dd className="caption-5 text-muted-foreground">{s.hint}</dd>}
         </div>
       ))}
     </dl>
+  );
+}
+
+/** Boş durum: çıplak bir panel yerine ne yapılacağını söyleyen düzenli bir kutu. */
+export function EmptyState({ title, children }: { title: string; children?: React.ReactNode }) {
+  return (
+    <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed bg-surface p-10 text-center">
+      <p className="title-3">{title}</p>
+      {children && <div className="body-6 flex flex-wrap justify-center gap-2 text-muted-foreground">{children}</div>}
+    </div>
   );
 }

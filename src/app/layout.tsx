@@ -47,13 +47,19 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+    { media: "(prefers-color-scheme: dark)", color: "#181818" },
   ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="tr" suppressHydrationWarning className={`${sans.variable} ${mono.variable} h-full antialiased`}>
+      <head>
+        {/* JavaScript kapalıysa kaydırma animasyonlu bölümler görünür kalsın */}
+        <noscript>
+          <style>{".reveal{opacity:1!important;transform:none!important}.tagline-word{opacity:1!important}"}</style>
+        </noscript>
+      </head>
       <body className="flex min-h-full flex-col">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <TRPCReactProvider>

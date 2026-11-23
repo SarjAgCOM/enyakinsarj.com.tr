@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function AboutPage() {
   return (
-    <div className="mx-auto max-w-3xl px-4">
+    <div className="container-page max-w-3xl">
       <PageHeader crumbs={[{ href: "/hakkimizda", label: "Hakkımızda" }]} title="Hakkımızda" />
       <div className="prose-content">
         <p>

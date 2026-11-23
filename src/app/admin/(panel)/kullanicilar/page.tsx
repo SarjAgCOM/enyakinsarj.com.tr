@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Trash2Icon } from "lucide-react";
+import { TrashIcon } from "@phosphor-icons/react/ssr";
 import { toast } from "sonner";
 import { useTRPC } from "@/trpc/react";
 import { AdminPageTitle } from "@/components/admin/page-title";
@@ -59,7 +59,7 @@ export default function UsersPage() {
                   <TableCell className="text-muted-foreground">{fmtDate(u.createdAt)}</TableCell>
                   <TableCell className="text-right">
                     <Button size="icon-sm" variant="ghost" aria-label="Sil" onClick={() => confirm(`${u.email} silinsin mi?`) && del.mutate({ id: u.id })}>
-                      <Trash2Icon />
+                      <TrashIcon />
                     </Button>
                   </TableCell>
                 </TableRow>

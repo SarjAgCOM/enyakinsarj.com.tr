@@ -1,0 +1,21 @@
+"use client";
+
+import { MoonIcon, SunIcon } from "@phosphor-icons/react/ssr";
+import { useTheme } from "next-themes";
+import { Button } from "@/components/ui/button";
+
+export function ThemeToggle() {
+  const { resolvedTheme, setTheme } = useTheme();
+  return (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      aria-label="Açık veya koyu temaya geç"
+      onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+    >
+      {/* İkon seçimi CSS ile yapılır; böylece sunucu ve istemci çıktısı aynı kalır. */}
+      <SunIcon className="hidden dark:block" />
+      <MoonIcon className="dark:hidden" />
+    </Button>
+  );
+}

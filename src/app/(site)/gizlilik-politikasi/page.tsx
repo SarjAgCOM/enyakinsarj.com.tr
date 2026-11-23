@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <div className="mx-auto max-w-3xl px-4">
+    <div className="container-page max-w-3xl">
       <PageHeader crumbs={[{ href: "/gizlilik-politikasi", label: "Gizlilik Politikası" }]} title="Gizlilik politikası" />
       <div className="prose-content">
         <p>

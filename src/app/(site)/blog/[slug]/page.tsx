@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarIcon, ClockIcon } from "lucide-react";
+import { CalendarBlankIcon, ClockIcon, CrosshairIcon } from "@phosphor-icons/react/ssr";
 import { Breadcrumbs, Section } from "@/components/site/page-header";
 import { Markdown, extractFaq, extractHeadings } from "@/components/site/markdown";
 import { PostCard } from "@/components/site/post-card";
@@ -10,6 +10,7 @@ import { JsonLd } from "@/components/site/json-ld";
 import { ViewTracker } from "@/components/site/view-tracker";
 import { ShareButtons } from "@/components/site/share-buttons";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { getPublishedPost } from "@/server/services/posts";
 import { absoluteUrl, site } from "@/lib/site";
 import { fmtDate } from "@/lib/format";
@@ -54,7 +55,7 @@ export default async function BlogPostPage({ params }: PageProps<"/blog/[slug]">
   const url = absoluteUrl(`/blog/${post.slug}`);
 
   return (
-    <article className="mx-auto max-w-7xl px-4">
+    <article className="container-page">
       <JsonLd
         data={[
           {
@@ -85,7 +86,7 @@ export default async function BlogPostPage({ params }: PageProps<"/blog/[slug]">
       />
       <ViewTracker slug={post.slug} />
 
-      <header className="mx-auto max-w-3xl space-y-4 pb-8 pt-8">
+      <header className="mx-auto flex max-w-5xl flex-col gap-4 pb-8 pt-6">
         <Breadcrumbs
           items={[
             { href: "/blog", label: "Blog" },
@@ -93,15 +94,15 @@ export default async function BlogPostPage({ params }: PageProps<"/blog/[slug]">
             { href: `/blog/${post.slug}`, label: post.title },
           ]}
         />
-        <h1 className="text-3xl font-bold tracking-tight text-balance md:text-5xl">{post.title}</h1>
-        {post.excerpt && <p className="text-lg text-muted-foreground">{post.excerpt}</p>}
-        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+        <h1 className="heading-4 max-w-3xl md:heading-2">{post.title}</h1>
+        {post.excerpt && <p className="title-2 max-w-3xl text-muted-foreground">{post.excerpt}</p>}
+        <div className="caption-2 flex flex-wrap items-center gap-4 text-muted-foreground">
           {post.author && <span>{post.author.name}</span>}
-          <span className="flex items-center gap-1.5">
-            <CalendarIcon className="size-4" />
+          <span className="flex items-center gap-2">
+            <CalendarBlankIcon className="size-4" />
             <time dateTime={post.publishedAt ?? undefined}>{fmtDate(post.publishedAt)}</time>
           </span>
-          <span className="flex items-center gap-1.5">
+          <span className="flex items-center gap-2">
             <ClockIcon className="size-4" /> {readMinutes} dk okuma
           </span>
         </div>
@@ -132,16 +133,16 @@ export default async function BlogPostPage({ params }: PageProps<"/blog/[slug]">
               ))}
             </div>
           )}
-          <div className="mt-8 border-t pt-6">
+          <div className="mt-10">
             <ShareButtons url={url} title={post.title} />
           </div>
         </div>
         {headings.length > 2 && (
           <aside className="hidden lg:block">
-            <nav aria-label="İçindekiler" className="sticky top-24 space-y-2 text-sm">
-              <p className="font-semibold">İçindekiler</p>
+            <nav aria-label="İçindekiler" className="surface-card caption-2 sticky top-24 flex flex-col gap-2 p-4">
+              <p className="title-4">İçindekiler</p>
               {headings.map((h) => (
-                <a key={h.id} href={`#${h.id}`} className="block text-muted-foreground hover:text-foreground">
+                <a key={h.id} href={`#${h.id}`} className="text-muted-foreground transition-colors duration-300 ease-smooth hover:text-foreground">
                   {h.label}
                 </a>
               ))}
@@ -160,11 +161,13 @@ export default async function BlogPostPage({ params }: PageProps<"/blog/[slug]">
         </Section>
       )}
 
-      <div className="mx-auto max-w-5xl rounded-2xl border bg-muted/40 p-6 text-center">
-        <p className="font-medium">Yakınınızdaki şarj istasyonlarını görmek ister misiniz?</p>
-        <Link href="/sarj-haritasi?yakinimda=1" className="mt-2 inline-block font-semibold text-primary hover:underline">
-          Şarj haritasını aç →
-        </Link>
+      <div className="mx-auto max-w-5xl flex flex-col items-center gap-4 rounded-3xl bg-surface p-10 text-center">
+        <p className="title-2">Yakınınızdaki şarj istasyonlarını görmek ister misiniz?</p>
+        <Button asChild>
+          <Link href="/sarj-haritasi?yakinimda=1">
+            <CrosshairIcon data-icon="inline-start" weight="bold" /> En yakın istasyonu bul
+          </Link>
+        </Button>
       </div>
     </article>
   );

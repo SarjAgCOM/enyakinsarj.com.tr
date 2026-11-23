@@ -2,53 +2,44 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  ExternalLinkIcon,
-  FileTextIcon,
-  FolderIcon,
-  ImageIcon,
-  LayoutDashboardIcon,
-  LogOutIcon,
-  PlugZapIcon,
-  Share2Icon,
-  UsersIcon,
-} from "lucide-react";
+import { ArrowSquareOutIcon, FileTextIcon, FolderIcon, ImageIcon, PlugChargingIcon, ShareNetworkIcon, SignOutIcon, SquaresFourIcon, UsersIcon } from "@phosphor-icons/react/ssr";
 import { Button } from "@/components/ui/button";
 import { LogoMark } from "@/components/site/logo";
 import { cn } from "@/lib/utils";
 import { logoutAction } from "@/app/admin/actions";
 
 const NAV = [
-  { href: "/admin", label: "Pano", icon: LayoutDashboardIcon, exact: true },
+  { href: "/admin", label: "Pano", icon: SquaresFourIcon, exact: true },
   { href: "/admin/yazilar", label: "Blog yazıları", icon: FileTextIcon },
   { href: "/admin/kategoriler", label: "Kategoriler", icon: FolderIcon },
   { href: "/admin/medya", label: "Medya", icon: ImageIcon },
-  { href: "/admin/sosyal", label: "Sosyal medya", icon: Share2Icon },
-  { href: "/admin/istasyonlar", label: "Şarj ağları & senkron", icon: PlugZapIcon },
+  { href: "/admin/sosyal", label: "Sosyal medya", icon: ShareNetworkIcon },
+  { href: "/admin/istasyonlar", label: "Şarj ağları ve senkron", icon: PlugChargingIcon },
   { href: "/admin/kullanicilar", label: "Kullanıcılar", icon: UsersIcon, adminOnly: true },
 ];
 
 export function AdminSidebar({ user }: { user: { name: string; email: string; role: "ADMIN" | "EDITOR" } }) {
   const pathname = usePathname();
   return (
-    <aside className="border-b bg-background lg:sticky lg:top-0 lg:flex lg:h-svh lg:w-64 lg:flex-col lg:border-b-0 lg:border-r">
-      <div className="flex items-center gap-2 px-5 py-4">
-        <LogoMark className="size-7" />
-        <span className="font-semibold">Yönetim</span>
+    <aside className="bg-surface lg:sticky lg:top-0 lg:flex lg:h-svh lg:w-64 lg:flex-col">
+      <div className="flex items-center gap-2 px-4 py-4">
+        <LogoMark className="size-8" />
+        <span className="body-1">Yönetim</span>
       </div>
-      <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-1 lg:flex-col lg:overflow-visible">
+      <nav aria-label="Yönetim menüsü" className="flex gap-1 overflow-x-auto px-2 pb-2 lg:flex-1 lg:flex-col lg:overflow-visible">
         {NAV.filter((n) => !n.adminOnly || user.role === "ADMIN").map((n) => {
           const active = n.exact ? pathname === n.href : pathname.startsWith(n.href);
           return (
             <Link
               key={n.href}
               href={n.href}
+              aria-current={active ? "page" : undefined}
               className={cn(
-                "flex shrink-0 items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                "title-4 flex shrink-0 items-center gap-3 rounded-lg px-3 py-2 transition-colors duration-300 ease-smooth",
+                active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
               )}
             >
-              <n.icon className="size-4" />
+              <n.icon className="size-4" weight={active ? "fill" : "regular"} />
               {n.label}
             </Link>
           );
@@ -56,19 +47,21 @@ export function AdminSidebar({ user }: { user: { name: string; email: string; ro
         <Link
           href="/"
           target="_blank"
-          className="flex shrink-0 items-center gap-2.5 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted lg:mt-auto"
+          className="title-4 flex shrink-0 items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-colors duration-300 ease-smooth hover:bg-muted hover:text-foreground lg:mt-auto"
         >
-          <ExternalLinkIcon className="size-4" /> Siteyi görüntüle
+          <ArrowSquareOutIcon className="size-4" /> Siteyi görüntüle
         </Link>
       </nav>
-      <div className="hidden border-t p-4 lg:block">
-        <p className="truncate text-sm font-medium">{user.name}</p>
-        <p className="truncate text-xs text-muted-foreground">
-          {user.email} · {user.role === "ADMIN" ? "Yönetici" : "Editör"}
-        </p>
-        <form action={logoutAction} className="mt-3">
+      <div className="hidden flex-col gap-3 p-4 lg:flex">
+        <div className="flex flex-col">
+          <p className="title-4 truncate">{user.name}</p>
+          <p className="caption-5 truncate text-muted-foreground">
+            {user.email} · {user.role === "ADMIN" ? "Yönetici" : "Editör"}
+          </p>
+        </div>
+        <form action={logoutAction}>
           <Button variant="outline" size="sm" className="w-full" type="submit">
-            <LogOutIcon data-icon="inline-start" /> Çıkış yap
+            <SignOutIcon data-icon="inline-start" /> Çıkış yap
           </Button>
         </form>
       </div>

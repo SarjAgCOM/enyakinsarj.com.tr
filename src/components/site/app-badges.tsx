@@ -26,12 +26,12 @@ function Badge({ href, icon, small, big }: { href: string; icon: React.ReactNode
       href={href}
       target="_blank"
       rel="noopener"
-      className="inline-flex h-12 min-w-40 items-center gap-2.5 rounded-xl bg-foreground px-3.5 text-background transition-opacity hover:opacity-90"
+      className="inline-flex h-12 items-center gap-3 rounded-xl bg-foreground px-4 text-background transition-[opacity,transform] duration-300 ease-smooth hover:opacity-85 active:scale-[0.98]"
     >
       {icon}
-      <span className="flex flex-col leading-tight">
-        <span className="text-[10px] uppercase tracking-wide opacity-80">{small}</span>
-        <span className="text-[15px] font-semibold">{big}</span>
+      <span className="flex flex-col text-left">
+        <span className="caption-5 opacity-75">{small}</span>
+        <span className="body-4">{big}</span>
       </span>
     </a>
   );
