@@ -36,6 +36,9 @@ export function mapStation(s: SarjagStation, providerId: string) {
 
   const powers = s.connectors.map((c) => c.maxPowerKw).filter((n): n is number => typeof n === "number");
   const maxPowerKw = s.summary.maxPowerKw ?? (powers.length ? Math.max(...powers) : null);
+  // Bazı ağlar gücü bildirir ama AC/DC türünü bildirmez. Türkiye'deki halka açık AC soketler en fazla
+  // 22 kW olduğundan, tür yoksa güçten çıkarılır: 22 kW üstü DC, altı AC.
+  if (powerTypes.size === 0 && maxPowerKw != null) powerTypes.add(maxPowerKw > 22 ? "DC" : "AC");
   const standards = Array.from(
     new Set([...s.summary.standards, ...s.connectors.map((c) => c.standard)].map((x) => x.toUpperCase())),
   ).filter((x) => x && x !== "UNKNOWN");
