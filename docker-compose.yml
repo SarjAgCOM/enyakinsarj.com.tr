@@ -9,7 +9,10 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD gerekli}
       POSTGRES_DB: ${POSTGRES_DB:-enyakinsarj}
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      # Not: volume adı "pgdata" iken ilk kurulum farklı bir POSTGRES_USER ile yapılmıştı (rol bulunamadı hatası).
+      # PostgreSQL kullanıcıyı ve veritabanını yalnızca volume İLK oluşturulurken kurar; bu yüzden yeni bir
+      # volume adı kullanılıyor. Eski "pgdata" volume'u silinmedi, sunucuda duruyor.
+      - dbdata:/var/lib/postgresql/data
       # Yerel unix soketi migrate ile paylaşılır: POSTGRES_PASSWORD sonradan değişirse
       # migrate, veritabanındaki şifreyi yeni değerle eşitleyebilir (scripts/db-check.mjs).
       - pgsocket:/var/run/postgresql
@@ -83,5 +86,5 @@ services:
       done'
 
 volumes:
-  pgdata:
+  dbdata:
   pgsocket:
