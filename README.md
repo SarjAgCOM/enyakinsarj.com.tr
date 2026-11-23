@@ -87,6 +87,16 @@ docker compose up -d --build
 2. `app` servisine alan adını port ile verin: `https://enyakinsarj.com.tr:3000` (Traefik konteynerin 3000 portuna yönlendirir).
 3. Ortam değişkenlerini Coolify arayüzünden girin: en az `POSTGRES_PASSWORD`, `APP_SECRET`, `CRON_SECRET`,
    `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `NEXT_PUBLIC_SITE_URL` (build-time), `SARJAG_API_KEY`.
+4. `DATABASE_URL` girmeniz gerekmez: bağlantı `POSTGRES_*` değerlerinden kurulur, şifrede özel karakter olabilir.
+
+**`migrate` servisi `exit 1` ile biterse** asıl mesaj deploy logunda değil, `migrate` konteynerinin logundadır
+(Coolify → Logs). En sık neden: `POSTGRES_PASSWORD` veritabanı ilk oluşturulduktan sonra değiştirilmiştir.
+PostgreSQL şifreyi yalnızca volume ilk oluşturulurken okur. Veri kaybetmeden düzeltmek için `db` konteynerinin
+terminalinde:
+
+```bash
+psql -U enyakinsarj -d enyakinsarj -c "ALTER USER enyakinsarj WITH PASSWORD 'YENI_SIFRE'"
+```
 
 ## Ortam değişkenleri
 

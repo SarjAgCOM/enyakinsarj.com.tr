@@ -2,8 +2,9 @@ import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
+import { databaseUrl } from "../src/lib/database-url";
 
-const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }) });
+const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: databaseUrl() }) });
 
 const CATEGORIES = [
   { slug: "sarj-rehberi", name: "Şarj Rehberi", description: "Elektrikli araç şarjı hakkında pratik rehberler." },

@@ -28,7 +28,8 @@ RUN npx prisma generate && npm run build
 
 # ───────────── Migration / seed (tek seferlik) ─────────────
 FROM builder AS migrator
-CMD ["sh", "-c", "npx prisma migrate deploy && npx prisma db seed"]
+# Önce bağlantıyı doğrula (hata nedenini açıkça yazar), sonra migration ve seed
+CMD ["sh", "-c", "node scripts/db-check.mjs && npx prisma migrate deploy && npx prisma db seed"]
 
 # ───────────── Çalışma zamanı ─────────────
 FROM node:22-alpine AS runner

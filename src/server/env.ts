@@ -6,7 +6,8 @@ import { z } from "zod";
  * sırasında (ör. Docker imajı oluşturulurken) gizli anahtarlar olmadan derleme yapılabilir.
  */
 const schema = z.object({
-  DATABASE_URL: z.string().min(1),
+  // Docker'da bağlantı POSTGRES_* parçalarından kurulur (bkz. src/lib/database-url.ts)
+  DATABASE_URL: z.string().optional(),
   APP_SECRET: z.string().min(32, "APP_SECRET en az 32 karakter olmalı"),
   CRON_SECRET: z.string().min(16).optional(),
   SARJAG_API_KEY: z.string().optional(),
