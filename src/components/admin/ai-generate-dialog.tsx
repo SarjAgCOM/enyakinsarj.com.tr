@@ -53,7 +53,7 @@ export function AiGenerateDialog({
         <DialogHeader>
           <DialogTitle>Yapay zekâ ile blog yazısı oluştur</DialogTitle>
           <DialogDescription>
-            Claude; başlık, SEO meta, içerik, etiketler ve X/Instagram metinlerini birlikte üretir. Sitedeki güncel istasyon ve
+            Yapay zekâ; başlık, SEO meta, içerik, etiketler ve X/Instagram metinlerini birlikte üretir. Sitedeki güncel istasyon ve
             fiyat verileri bağlam olarak eklenebilir.
           </DialogDescription>
         </DialogHeader>

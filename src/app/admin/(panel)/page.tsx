@@ -79,7 +79,11 @@ export default function DashboardPage() {
                 <ul className="space-y-3">
                   <Check ok={me.data?.ok ?? false} label="Şarjağ API" hint="SARJAG_API_KEY tanımlayın" />
                   <Check ok={data.stats.stations > 0} label="İstasyon verisi" hint="Şarj ağları sayfasından senkron başlatın" />
-                  <Check ok={data.ai} label="Yapay zekâ (Claude)" hint="ANTHROPIC_API_KEY tanımlayın" />
+                  <Check
+                    ok={data.ai}
+                    label={data.aiLabel ? `Yapay zekâ (${data.aiLabel})` : "Yapay zekâ"}
+                    hint="AI_PROVIDER ve AI_API_KEY (ücretsiz servis) ya da ANTHROPIC_API_KEY tanımlayın"
+                  />
                   <Check ok={data.storage} label="Oracle Object Storage" hint="OCI_* değişkenlerini tanımlayın" />
                 </ul>
               </CardContent>

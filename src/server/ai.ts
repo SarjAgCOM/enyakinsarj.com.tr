@@ -5,35 +5,91 @@ import { z } from "zod";
 import { env } from "./env";
 
 /**
- * Yapay zekâ özellikleri (Claude). Varsayılan model: claude-opus-5-5 (AI_MODEL ile değiştirilebilir).
- * Yanıtlar zod şemalarıyla yapılandırılmış çıktı olarak alınır (`messages.parse`).
+ * Yapay zekâ özellikleri. İki sağlayıcı yolu vardır:
+ *
+ *  - anthropic: Claude (resmî SDK, yapılandırılmış çıktı `messages.parse`).
+ *  - OpenAI uyumlu servisler: Gemini, Groq, OpenRouter veya herhangi bir uyumlu uç nokta. Bunların ücretsiz
+ *    katmanları vardır; kotalar ve model adları sağlayıcıya göre değişir (bkz. .env.example).
+ *
+ * Sağlayıcı AI_PROVIDER ile seçilir. Seçilmemişse: AI_API_KEY varsa "gemini", yoksa ANTHROPIC_API_KEY ile "anthropic".
+ * Her iki yolda da yanıt zod şemasıyla doğrulanır.
  */
-
-let client: Anthropic | undefined;
-const anthropic = () => (client ??= new Anthropic({ apiKey: env().ANTHROPIC_API_KEY }));
-
-export const isAiConfigured = () => Boolean(env().ANTHROPIC_API_KEY);
 
 export class AiError extends Error {}
 
-// Sunucu tarafı ret (refusal) yedeği desteklenen modeller
-const FALLBACK_MODELS = new Set(["claude-fable-5-2", "claude-fable-5-1", "claude-opus-5-5", "claude-opus-5", "claude-sonnet-5-5"]);
+type CompatProvider = "gemini" | "groq" | "openrouter" | "custom";
+type Provider = "anthropic" | CompatProvider;
 
-async function structured<S extends z.ZodType>(opts: {
+const PRESETS: Record<Exclude<CompatProvider, "custom">, { baseUrl: string; model?: string; label: string }> = {
+  gemini: { baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai", model: "gemini-flash-latest", label: "Google Gemini" },
+  groq: { baseUrl: "https://api.groq.com/openai/v1", model: "openai/gpt-oss-120b", label: "Groq" },
+  // OpenRouter'da ücretsiz modeller ":free" ekiyle biter ve sık değişir; AI_MODEL ile belirtilmelidir.
+  openrouter: { baseUrl: "https://openrouter.ai/api/v1", label: "OpenRouter" },
+};
+
+interface AiConfig {
+  provider: Provider;
+  label: string;
+  apiKey: string;
+  model: string;
+  baseUrl?: string;
+}
+
+/** Etkin sağlayıcı ayarı; yapılandırma eksikse `null`. */
+export function aiConfig(): AiConfig | null {
+  const e = env();
+  const chosen = e.AI_PROVIDER ?? (e.AI_API_KEY ? "gemini" : e.ANTHROPIC_API_KEY ? "anthropic" : undefined);
+  if (!chosen) return null;
+
+  if (chosen === "anthropic") {
+    if (!e.ANTHROPIC_API_KEY) return null;
+    const model = e.AI_MODEL?.startsWith("claude") ? e.AI_MODEL : "claude-opus-5-5";
+    return { provider: "anthropic", label: "Claude", apiKey: e.ANTHROPIC_API_KEY, model };
+  }
+
+  if (!e.AI_API_KEY) return null;
+  const preset = chosen === "custom" ? undefined : PRESETS[chosen];
+  const baseUrl = (e.AI_BASE_URL ?? preset?.baseUrl)?.replace(/\/+$/, "");
+  // AI_MODEL'de Claude için kalmış bir değer varsa bu sağlayıcıda geçersizdir; sağlayıcının varsayılanı kullanılır.
+  const model = e.AI_MODEL && !e.AI_MODEL.startsWith("claude") ? e.AI_MODEL : preset?.model;
+  if (!baseUrl || !model) return null;
+  return { provider: chosen, label: preset?.label ?? "Özel servis", apiKey: e.AI_API_KEY, model, baseUrl };
+}
+
+export const isAiConfigured = () => aiConfig() !== null;
+
+const NOT_CONFIGURED =
+  "Yapay zekâ servisi yapılandırılmamış. AI_PROVIDER ve AI_API_KEY (ücretsiz servisler) ya da ANTHROPIC_API_KEY tanımlayın.";
+
+interface StructuredOptions<S extends z.ZodType> {
   system: string;
   prompt: string;
   schema: S;
   effort: "low" | "medium" | "high";
   maxTokens?: number;
-}): Promise<z.infer<S>> {
-  if (!isAiConfigured()) throw new AiError("ANTHROPIC_API_KEY tanımlı değil.");
-  const model = env().AI_MODEL;
-  const withFallback = FALLBACK_MODELS.has(model);
+}
+
+async function structured<S extends z.ZodType>(opts: StructuredOptions<S>): Promise<z.infer<S>> {
+  const cfg = aiConfig();
+  if (!cfg) throw new AiError(NOT_CONFIGURED);
+  return cfg.provider === "anthropic" ? viaAnthropic(cfg, opts) : viaOpenAiCompatible(cfg, opts);
+}
+
+// ─────────────────────────── Claude ───────────────────────────
+
+let client: Anthropic | undefined;
+
+// Sunucu tarafı ret (refusal) yedeği desteklenen modeller
+const FALLBACK_MODELS = new Set(["claude-fable-5-2", "claude-fable-5-1", "claude-opus-5-5", "claude-opus-5", "claude-sonnet-5-5"]);
+
+async function viaAnthropic<S extends z.ZodType>(cfg: AiConfig, opts: StructuredOptions<S>): Promise<z.infer<S>> {
+  client ??= new Anthropic({ apiKey: cfg.apiKey });
+  const withFallback = FALLBACK_MODELS.has(cfg.model);
 
   let response;
   try {
-    response = await anthropic().beta.messages.parse({
-      model,
+    response = await client.beta.messages.parse({
+      model: cfg.model,
       max_tokens: opts.maxTokens ?? 16000,
       system: opts.system,
       messages: [{ role: "user", content: opts.prompt }],
@@ -51,6 +107,110 @@ async function structured<S extends z.ZodType>(opts: {
   if (response.stop_reason === "max_tokens") throw new AiError("Yanıt uzunluk sınırına takıldı; daha kısa bir içerik isteyin.");
   if (!response.parsed_output) throw new AiError("Yapay zekâ yanıtı beklenen biçimde değil.");
   return response.parsed_output as z.infer<S>;
+}
+
+// ─────────────────────────── OpenAI uyumlu servisler (Gemini, Groq, OpenRouter…) ───────────────────────────
+
+interface ChatMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
+
+interface ChatResponse {
+  choices?: { message?: { content?: string | null }; finish_reason?: string }[];
+  error?: { message?: string } | string;
+}
+
+/** Yanıt metninden JSON nesnesini ayıklar (kod bloğu veya çevresindeki metin olsa bile). */
+function extractJson(text: string): unknown {
+  const trimmed = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
+  const start = trimmed.indexOf("{");
+  const end = trimmed.lastIndexOf("}");
+  if (start < 0 || end <= start) throw new Error("JSON nesnesi bulunamadı");
+  return JSON.parse(trimmed.slice(start, end + 1));
+}
+
+async function chat(cfg: AiConfig, messages: ChatMessage[], maxTokens: number, jsonMode: boolean) {
+  let res: Response;
+  try {
+    res = await fetch(`${cfg.baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${cfg.apiKey}` },
+      body: JSON.stringify({
+        model: cfg.model,
+        messages,
+        max_tokens: maxTokens,
+        ...(jsonMode ? { response_format: { type: "json_object" } } : {}),
+      }),
+      signal: AbortSignal.timeout(180_000),
+    });
+  } catch (e) {
+    throw new AiError(`${cfg.label} servisine ulaşılamadı: ${(e as Error).message}`);
+  }
+  const body = (await res.json().catch(() => null)) as ChatResponse | ChatResponse[] | null;
+  // Gemini hata gövdesini dizi içinde döndürebilir.
+  const data = Array.isArray(body) ? body[0] : body;
+  const errorMessage = typeof data?.error === "string" ? data.error : data?.error?.message;
+  return { status: res.status, ok: res.ok, data, errorMessage };
+}
+
+async function viaOpenAiCompatible<S extends z.ZodType>(cfg: AiConfig, opts: StructuredOptions<S>): Promise<z.infer<S>> {
+  // Ücretsiz katmanlarda dakikalık jeton sınırı düşüktür; çıktı üst sınırı buna göre tutulur.
+  const maxTokens = Math.min(opts.maxTokens ?? 8000, env().AI_MAX_TOKENS ?? 8000);
+  const messages: ChatMessage[] = [
+    {
+      role: "system",
+      content:
+        `${opts.system}\n\n` +
+        "Yanıtını YALNIZCA aşağıdaki JSON şemasına uyan tek bir JSON nesnesi olarak ver. " +
+        "Açıklama, giriş cümlesi veya kod bloğu ekleme. Şemadaki tüm alanları doldur; değer yoksa null kullan.\n" +
+        `JSON şeması:\n${JSON.stringify(z.toJSONSchema(opts.schema))}`,
+    },
+    { role: "user", content: opts.prompt },
+  ];
+
+  let jsonMode = true;
+  let lastProblem = "";
+  // En fazla 3 çağrı: JSON kipini desteklemeyen modelde kipsiz tekrar + şemaya uymayan yanıtta bir düzeltme turu.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const r = await chat(cfg, messages, maxTokens, jsonMode);
+
+    if (!r.ok) {
+      if (r.status === 400 && jsonMode && /response_format|json_object|json mode/i.test(r.errorMessage ?? "")) {
+        jsonMode = false;
+        continue;
+      }
+      if (r.status === 401 || r.status === 403) throw new AiError(`${cfg.label}: AI_API_KEY geçersiz veya yetkisiz.`);
+      if (r.status === 404) throw new AiError(`${cfg.label}: "${cfg.model}" modeli bulunamadı. AI_MODEL değerini kontrol edin.`);
+      if (r.status === 429 || r.status === 413) {
+        throw new AiError(`${cfg.label} kotası veya hız sınırı doldu. Biraz sonra yeniden deneyin ya da daha kısa içerik isteyin.`);
+      }
+      throw new AiError(`${cfg.label} hatası (${r.status}): ${r.errorMessage ?? "bilinmeyen hata"}`);
+    }
+
+    const choice = r.data?.choices?.[0];
+    const content = choice?.message?.content ?? "";
+    if (choice?.finish_reason === "length") {
+      throw new AiError("Yanıt uzunluk sınırına takıldı. Daha kısa bir içerik isteyin.");
+    }
+    if (choice?.finish_reason === "content_filter") throw new AiError("Yapay zekâ bu isteği yanıtlamadı.");
+
+    try {
+      const parsed = opts.schema.safeParse(extractJson(content));
+      if (parsed.success) return parsed.data;
+      lastProblem = parsed.error.issues
+        .slice(0, 6)
+        .map((i) => `${i.path.join(".") || "(kök)"}: ${i.message}`)
+        .join("; ");
+    } catch (e) {
+      lastProblem = (e as Error).message;
+    }
+    messages.push(
+      { role: "assistant", content },
+      { role: "user", content: `Yanıtın şemaya uymuyor (${lastProblem}). Yalnızca şemaya uyan geçerli JSON nesnesini yeniden gönder.` },
+    );
+  }
+  throw new AiError(`Yapay zekâ yanıtı beklenen biçimde değil (${lastProblem}). Yeniden deneyin.`);
 }
 
 // ─────────────────────────── Doğal dilde istasyon arama ───────────────────────────

@@ -11,7 +11,7 @@ import { getCityTable, getPriceTable, getStats, listProviders } from "../../serv
 import { runSync } from "../../services/sync";
 import { CACHE_TAGS } from "../../services/cache-tags";
 import { sarjag } from "../../sarjag/client";
-import { generateBlogPost, generateProviderContent, generateSeoMeta, generateSocialCopy, isAiConfigured } from "../../ai";
+import { aiConfig, generateBlogPost, generateProviderContent, generateSeoMeta, generateSocialCopy, isAiConfigured } from "../../ai";
 import { DEFAULT_TEMPLATES, PLATFORMS, renderMessage, saveCredentials, sharePost } from "../../social";
 import { deleteObject, isStorageConfigured } from "../../storage";
 
@@ -453,6 +453,8 @@ const dashboardRouter = createTRPCRouter({
       recentShares,
       topPosts,
       ai: isAiConfigured(),
+      // Etkin sağlayıcı ve model (anahtar gösterilmez)
+      aiLabel: ((c) => (c ? `${c.label} · ${c.model}` : null))(aiConfig()),
       storage: isStorageConfigured(),
     };
   }),

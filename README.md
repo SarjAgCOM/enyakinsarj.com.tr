@@ -14,7 +14,7 @@ ve site trafiği Şarjağ'a değil veritabanına gider (token tasarrufu + hız).
 | API | tRPC v11 + zod v4 (girdi ve Şarjağ yanıt doğrulaması), superjson |
 | Veritabanı | PostgreSQL 17 + Prisma 7 (`@prisma/adapter-pg`) |
 | Arayüz | shadcn/ui (Radix), Tailwind CSS v4, Phosphor ikonları, MapLibre GL (OpenFreeMap karoları) |
-| Yapay zekâ | Claude (`@anthropic-ai/sdk`, yapılandırılmış çıktı) |
+| Yapay zekâ | Ücretsiz OpenAI uyumlu servisler (Gemini, Groq, OpenRouter) veya Claude; zod ile doğrulanan yapılandırılmış çıktı |
 | Görseller | Oracle Cloud Object Storage (S3 uyumluluk API'si) |
 | Sosyal medya | X API v2 (OAuth 1.0a), Instagram Graph API |
 | Çalıştırma | Docker Compose: `db`, `migrate`, `app`, `cron` |
@@ -121,7 +121,7 @@ Tamamı `.env.example` içinde açıklamalıdır. Önemli olanlar:
 | `SARJAG_API_KEY` | console.sarjag.com → Proje → API anahtarı (`sk_live_…`). Yalnızca sunucuda kullanılır. |
 | `APP_SECRET` | Oturum imzası ve sosyal medya kimlik bilgilerinin şifrelenmesi (≥32 karakter) |
 | `CRON_SECRET` | `/api/cron` yetkilendirmesi |
-| `ANTHROPIC_API_KEY`, `AI_MODEL` | Yapay zekâ özellikleri (varsayılan `claude-opus-5-5`) |
+| `AI_PROVIDER`, `AI_API_KEY`, `AI_MODEL` | Yapay zekâ: `gemini` / `groq` / `openrouter` (ücretsiz katman) veya `anthropic` + `ANTHROPIC_API_KEY`. Ayrıntı `.env.example` içinde |
 | `OCI_*` | Oracle Object Storage: namespace, region, bucket, Customer Secret Key; bucket görselleri herkese açık olmalı (Instagram ve site için) |
 | `NEXT_PUBLIC_SARJAG_PLAY_STORE_URL` | Şarjağ Android uygulama bağlantısı (boşsa Play Store araması açılır) |
 
