@@ -11,6 +11,10 @@ export const site = {
     appStoreUrl:
       process.env.NEXT_PUBLIC_SARJAG_APP_STORE_URL ??
       "https://apps.apple.com/tr/app/%C5%9Farja%C4%9F-t%C3%BCm-%C5%9Farj-i-stasyonlar%C4%B1/id6834798761",
+    /** App Store bağlantısındaki sayısal kimlik; iOS Safari'deki "Smart App Banner" için kullanılır. */
+    get appStoreId(): string | undefined {
+      return this.appStoreUrl.match(/id(\d+)/)?.[1];
+    },
     // Google Play bağlantısı Şarjağ sitesinde henüz yayınlanmadığı için env'den okunur;
     // tanımlı değilse Play Store araması açılır.
     playStoreUrl:

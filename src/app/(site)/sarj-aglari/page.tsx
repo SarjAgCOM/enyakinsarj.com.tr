@@ -4,7 +4,7 @@ import { EmptyState, PageHeader } from "@/components/site/page-header";
 import { ProviderDot } from "@/components/site/station-card";
 import { JsonLd } from "@/components/site/json-ld";
 import { listProviders } from "@/server/services/stations";
-import { fmtInt, fmtKw, fmtTl } from "@/lib/format";
+import { fmtInt, fmtKw, fmtTl, hasPowerData } from "@/lib/format";
 import { absoluteUrl } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -51,7 +51,7 @@ export default async function ProvidersPage() {
                 <ProviderDot color={p.color} />
                 {p.name}
               </h2>
-              <span className="caption-5 text-muted-foreground">en yüksek {fmtKw(p.maxPowerKw)}</span>
+              {p.maxPowerKw != null && <span className="caption-5 text-muted-foreground">en yüksek {fmtKw(p.maxPowerKw)}</span>}
             </div>
             <dl className="grid grid-cols-3 gap-2">
               <div>
@@ -60,7 +60,7 @@ export default async function ProvidersPage() {
               </div>
               <div>
                 <dt className="caption-5 text-muted-foreground">DC</dt>
-                <dd className="body-4 tabular-nums">{fmtInt(p.dcStationCount)}</dd>
+                <dd className="body-4 tabular-nums">{hasPowerData(p) ? fmtInt(p.dcStationCount) : "Veri yok"}</dd>
               </div>
               <div>
                 <dt className="caption-5 text-muted-foreground">DC kWh</dt>

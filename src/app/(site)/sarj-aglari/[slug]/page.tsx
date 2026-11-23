@@ -9,29 +9,56 @@ import { Markdown, extractFaq } from "@/components/site/markdown";
 import { JsonLd } from "@/components/site/json-ld";
 import { Button } from "@/components/ui/button";
 import { getProviderBySlug, listProviders } from "@/server/services/stations";
-import { costPer100Km, fmtDate, fmtInt, fmtKw, fmtTl, standardLabel } from "@/lib/format";
+import {
+  costPer100Km,
+  fmtDate,
+  fmtInt,
+  fmtKw,
+  fmtTl,
+  hasPowerData,
+  standardLabel,
+} from "@/lib/format";
 import { absoluteUrl } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata({ params }: PageProps<"/sarj-aglari/[slug]">): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps<"/sarj-aglari/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const p = await getProviderBySlug(slug);
   if (!p) return { title: "Şarj ağı bulunamadı" };
   const year = new Date().getFullYear();
   return {
     title: `${p.name} Şarj İstasyonları ${year}: ${fmtInt(p.stationCount)} İstasyon Haritası ve kWh Fiyatları`,
-    description: `${p.name} şarj ağının Türkiye'deki ${fmtInt(p.stationCount)} istasyonu haritada. ${fmtInt(p.dcStationCount)} DC hızlı şarj, en yüksek ${fmtKw(p.maxPowerKw)}${p.minDcPrice ? `, DC ${fmtTl(p.minDcPrice)}/kWh'den başlayan fiyatlar` : ""}.`,
+    description:
+      `${p.name} şarj ağının Türkiye'deki ${fmtInt(p.stationCount)} istasyonu haritada.` +
+      (hasPowerData(p)
+        ? ` ${fmtInt(p.dcStationCount)} DC hızlı şarj, en yüksek ${fmtKw(p.maxPowerKw)}.`
+        : "") +
+      (p.minDcPrice
+        ? ` DC ${fmtTl(p.minDcPrice)}/kWh'den başlayan fiyatlar.`
+        : "") +
+      " Konum, yol tarifi ve anlık doluluk.",
     alternates: { canonical: `/sarj-aglari/${p.slug}` },
-    openGraph: { title: `${p.name} şarj istasyonları haritası`, url: absoluteUrl(`/sarj-aglari/${p.slug}`) },
+    openGraph: {
+      title: `${p.name} şarj istasyonları haritası`,
+      url: absoluteUrl(`/sarj-aglari/${p.slug}`),
+    },
   };
 }
 
-export default async function ProviderPage({ params }: PageProps<"/sarj-aglari/[slug]">) {
+export default async function ProviderPage({
+  params,
+}: PageProps<"/sarj-aglari/[slug]">) {
   const { slug } = await params;
-  const [p, providers] = await Promise.all([getProviderBySlug(slug), listProviders()]);
+  const [p, providers] = await Promise.all([
+    getProviderBySlug(slug),
+    listProviders(),
+  ]);
   if (!p) notFound();
   const faq = p.seoContent ? extractFaq(p.seoContent) : [];
+  const powerKnown = hasPowerData(p);
 
   return (
     <div className="container-page">
@@ -50,7 +77,11 @@ export default async function ProviderPage({ params }: PageProps<"/sarj-aglari/[
                 {
                   "@context": "https://schema.org",
                   "@type": "FAQPage",
-                  mainEntity: faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+                  mainEntity: faq.map((f) => ({
+                    "@type": "Question",
+                    name: f.q,
+                    acceptedAnswer: { "@type": "Answer", text: f.a },
+                  })),
                 },
               ]
             : []),
@@ -78,27 +109,59 @@ export default async function ProviderPage({ params }: PageProps<"/sarj-aglari/[
 
       <StatGrid
         items={[
-          { label: "İstasyon", value: fmtInt(p.stationCount), hint: `${fmtInt(p.connectorCount)} soket` },
-          { label: "DC hızlı şarj", value: fmtInt(p.dcStationCount) },
-          { label: "150 kW ve üzeri", value: fmtInt(p.ultra) },
-          { label: "En yüksek güç", value: fmtKw(p.maxPowerKw), hint: `${p.cities.length} ilde` },
+          {
+            label: "İstasyon",
+            value: fmtInt(p.stationCount),
+            hint: `${fmtInt(p.connectorCount)} soket`,
+          },
+          {
+            label: "DC hızlı şarj",
+            value: powerKnown ? fmtInt(p.dcStationCount) : "Veri yok",
+          },
+          {
+            label: "150 kW ve üzeri",
+            value: powerKnown ? fmtInt(p.ultra) : "Veri yok",
+          },
+          {
+            label: "En yüksek güç",
+            value: p.maxPowerKw != null ? fmtKw(p.maxPowerKw) : "Veri yok",
+            hint: p.cities.length > 0 ? `${p.cities.length} ilde` : undefined,
+          },
         ]}
       />
+      {!powerKnown && (
+        <p className="caption-2 mt-3 text-muted-foreground">
+          {p.name}, istasyon listesinde güç ve soket ayrıntısı paylaşmıyor.
+          İstasyonların konumu haritada yer alır; güncel soket durumu için
+          istasyon sayfasındaki “Anlık doluluğu göster” butonunu kullanın.
+        </p>
+      )}
 
       <div className="mt-6">
         <Suspense>
           <MapExplorer
             providerId={p.id}
-            providers={providers.map((x) => ({ id: x.id, name: x.name, slug: x.slug, color: x.color, stationCount: x.stationCount }))}
+            providers={providers.map((x) => ({
+              id: x.id,
+              name: x.name,
+              slug: x.slug,
+              color: x.color,
+              stationCount: x.stationCount,
+            }))}
           />
         </Suspense>
-        <p className="caption-5 mt-3 text-muted-foreground">Son senkron {fmtDate(p.lastSyncedAt)}. Kaynak: Şarjağ API.</p>
+        <p className="caption-5 mt-3 text-muted-foreground">
+          Son senkron {fmtDate(p.lastSyncedAt)}. Kaynak: Şarjağ API.
+        </p>
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
         <div>
           {(p.minAcPrice != null || p.minDcPrice != null) && (
-            <Section title={`${p.name} şarj ücretleri`} subtitle="KDV dahil kWh fiyatları. İstasyona göre değişebilir.">
+            <Section
+              title={`${p.name} şarj ücretleri`}
+              subtitle="KDV dahil kWh fiyatları. İstasyona göre değişebilir."
+            >
               <div className="data-table-wrap">
                 <table className="data-table">
                   <thead>
@@ -114,13 +177,17 @@ export default async function ProviderPage({ params }: PageProps<"/sarj-aglari/[
                       <td className="body-5">AC (Type 2)</td>
                       <td className="num">{fmtTl(p.minAcPrice)}</td>
                       <td className="num">{fmtTl(p.maxAcPrice)}</td>
-                      <td className="num">{fmtTl(costPer100Km(p.minAcPrice))}</td>
+                      <td className="num">
+                        {fmtTl(costPer100Km(p.minAcPrice))}
+                      </td>
                     </tr>
                     <tr>
                       <td className="body-5">DC (CCS, CHAdeMO)</td>
                       <td className="num">{fmtTl(p.minDcPrice)}</td>
                       <td className="num">{fmtTl(p.maxDcPrice)}</td>
-                      <td className="num">{fmtTl(costPer100Km(p.minDcPrice))}</td>
+                      <td className="num">
+                        {fmtTl(costPer100Km(p.minDcPrice))}
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -143,25 +210,34 @@ export default async function ProviderPage({ params }: PageProps<"/sarj-aglari/[
                 {p.standards.map((s) => (
                   <li key={s.standard} className="flex justify-between">
                     <span>{standardLabel(s.standard)}</span>
-                    <span className="tabular-nums text-muted-foreground">{fmtInt(s.count)} istasyon</span>
+                    <span className="tabular-nums text-muted-foreground">
+                      {fmtInt(s.count)} istasyon
+                    </span>
                   </li>
                 ))}
               </ul>
             </div>
           )}
-          <div className="surface-card flex flex-col gap-3 p-6">
-            <h2 className="title-3">{p.name} istasyonu olan iller</h2>
-            <ul className="body-6 flex max-h-96 flex-col gap-2 overflow-y-auto">
-              {p.cities.map((c) => (
-                <li key={c.slug} className="flex justify-between">
-                  <Link href={`/sarj-istasyonlari/${c.slug}`} className="hover:text-primary">
-                    {c.name}
-                  </Link>
-                  <span className="tabular-nums text-muted-foreground">{fmtInt(c.count)}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {p.cities.length > 0 && (
+            <div className="surface-card flex flex-col gap-3 p-6">
+              <h2 className="title-3">{p.name} istasyonu olan iller</h2>
+              <ul className="body-6 flex max-h-96 flex-col gap-2 overflow-y-auto">
+                {p.cities.map((c) => (
+                  <li key={c.slug} className="flex justify-between">
+                    <Link
+                      href={`/sarj-istasyonlari/${c.slug}`}
+                      className="hover:text-primary"
+                    >
+                      {c.name}
+                    </Link>
+                    <span className="tabular-nums text-muted-foreground">
+                      {fmtInt(c.count)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </aside>
       </div>
     </div>

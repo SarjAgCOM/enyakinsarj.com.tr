@@ -22,7 +22,7 @@ import { TaglineReveal } from "@/components/site/tagline-reveal";
 import { getCityTable, getPriceTable, getStats, listProviders } from "@/server/services/stations";
 import { listPublishedPosts } from "@/server/services/posts";
 import { absoluteUrl, site } from "@/lib/site";
-import { costPer100Km, fmtDate, fmtInt, fmtTl } from "@/lib/format";
+import { costPer100Km, fmtDate, fmtInt, fmtTl, hasPowerData } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -159,7 +159,7 @@ export default async function HomePage() {
           <StatGrid
             items={[
               { label: "Şarj istasyonu", value: fmtInt(stats.stations) },
-              { label: "DC hızlı şarj", value: fmtInt(stats.dc) },
+              { label: "DC hızlı şarj", value: fmtInt(stats.dc), hint: "güç verisi paylaşan ağlarda" },
               { label: "150 kW ve üzeri", value: fmtInt(stats.ultra) },
               { label: "Şarj ağı", value: fmtInt(stats.providers), hint: `${stats.cities} ilde` },
             ]}
@@ -255,8 +255,12 @@ export default async function HomePage() {
                       <span className="truncate">{p.name}</span>
                     </p>
                     <p className="caption-2 text-muted-foreground">
-                      <span className="caption-1 tabular-nums text-foreground">{fmtInt(p.stationCount)}</span> istasyon,{" "}
-                      <span className="tabular-nums">{fmtInt(p.dcStationCount)}</span> DC
+                      <span className="caption-1 tabular-nums text-foreground">{fmtInt(p.stationCount)}</span> istasyon
+                      {hasPowerData(p) && (
+                        <>
+                          , <span className="tabular-nums">{fmtInt(p.dcStationCount)}</span> DC
+                        </>
+                      )}
                     </p>
                   </Link>
                 ))}

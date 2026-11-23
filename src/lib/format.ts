@@ -34,6 +34,13 @@ export const STANDARD_LABELS: Record<string, string> = {
   NACS: "NACS",
   SCHUKO: "Schuko",
 };
+/**
+ * Bazı ağlar liste verisinde güç ve soket ayrıntısı paylaşmaz. Bu durumda DC istasyon sayısı 0 değil,
+ * "bilinmiyor"dur; arayüzde ve llms.txt içinde 0 olarak yazılmamalıdır.
+ */
+export const hasPowerData = (p: { dcStationCount: number; maxPowerKw: number | null }) =>
+  p.maxPowerKw != null || p.dcStationCount > 0;
+
 export const standardLabel = (s: string) => STANDARD_LABELS[s.toUpperCase()] ?? s;
 
 export const STATUS_LABELS: Record<string, string> = {
