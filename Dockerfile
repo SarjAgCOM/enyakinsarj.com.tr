@@ -28,8 +28,10 @@ RUN npx prisma generate && npm run build
 
 # ───────────── Migration / seed (tek seferlik) ─────────────
 FROM builder AS migrator
-# Önce bağlantıyı doğrula (hata nedenini açıkça yazar), sonra migration ve seed
-CMD ["sh", "-c", "node scripts/db-check.mjs && npx prisma migrate deploy && npx prisma db seed"]
+# Önce bağlantıyı doğrula (hata nedenini açıkça yazar), sonra migration ve seed.
+# Hata olursa konteyner MIGRATE_HOLD_SECONDS (varsayılan 180) saniye açık kalır; böylece Coolify gibi
+# platformlarda "Runtime Logs" üzerinden hata mesajı okunabilir. Ardından exit 1 ile deploy'u durdurur.
+CMD ["sh", "-c", "node scripts/db-check.mjs && npx prisma migrate deploy && npx prisma db seed || { echo \"✗ migrate başarısız. Bu log okunabilsin diye konteyner ${MIGRATE_HOLD_SECONDS:-180} sn açık kalacak.\"; sleep ${MIGRATE_HOLD_SECONDS:-180}; exit 1; }"]
 
 # ───────────── Çalışma zamanı ─────────────
 FROM node:22-alpine AS runner
