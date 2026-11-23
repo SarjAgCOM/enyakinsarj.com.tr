@@ -10,6 +10,9 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-enyakinsarj}
     volumes:
       - pgdata:/var/lib/postgresql/data
+      # Yerel unix soketi migrate ile paylaşılır: POSTGRES_PASSWORD sonradan değişirse
+      # migrate, veritabanındaki şifreyi yeni değerle eşitleyebilir (scripts/db-check.mjs).
+      - pgsocket:/var/run/postgresql
     # Host'a port açılmaz; yerel geliştirmede docker-compose.override.yml 5432'yi açar.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
@@ -29,6 +32,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-enyakinsarj}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB:-enyakinsarj}
+    volumes:
+      - pgsocket:/var/run/postgresql
     depends_on:
       db:
         condition: service_healthy
@@ -79,3 +84,4 @@ services:
 
 volumes:
   pgdata:
+  pgsocket:
