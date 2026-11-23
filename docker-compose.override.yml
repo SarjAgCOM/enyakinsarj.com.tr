@@ -1,0 +1,9 @@
+# Yalnızca yerel geliştirme: `docker compose up` bu dosyayı otomatik birleştirir.
+# Coolify gibi platformlar compose'u `-f docker-compose.yml` ile çalıştırdığı için bu dosyayı kullanmaz.
+services:
+  db:
+    ports:
+      - "127.0.0.1:5432:5432"
+  app:
+    ports:
+      - "3000:3000"

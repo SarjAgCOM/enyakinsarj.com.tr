@@ -66,7 +66,15 @@ docker compose up -d --build
 - `migrate` servisi migration + seed çalıştırıp çıkar, ardından `app` başlar.
 - `cron` servisi 5 dakikada bir `POST /api/cron` çağırır: planlı yazıları yayınlar (+otomatik paylaşım) ve
   `SYNC_INTERVAL_HOURS` dolduysa Şarjağ senkronunu çalıştırır.
-- Önüne TLS sonlandıran bir reverse proxy (Caddy / Nginx / Traefik) koyun.
+- `docker-compose.yml` host'a port açmaz; önüne TLS sonlandıran bir reverse proxy (Caddy / Nginx / Traefik) koyun.
+  Yerelde `docker compose up` ayrıca `docker-compose.override.yml` dosyasını yükler ve 3000 / 5432 portlarını açar.
+
+### Coolify
+
+1. Kaynak türü **Docker Compose**, compose dosyası `docker-compose.yml`.
+2. `app` servisine alan adını port ile verin: `https://enyakinsarj.com.tr:3000` (Traefik konteynerin 3000 portuna yönlendirir).
+3. Ortam değişkenlerini Coolify arayüzünden girin: en az `POSTGRES_PASSWORD`, `APP_SECRET`, `CRON_SECRET`,
+   `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `NEXT_PUBLIC_SITE_URL` (build-time), `SARJAG_API_KEY`.
 
 ## Ortam değişkenleri
 

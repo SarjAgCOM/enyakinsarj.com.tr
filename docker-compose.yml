@@ -10,8 +10,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-enyakinsarj}
     volumes:
       - pgdata:/var/lib/postgresql/data
-    ports:
-      - "127.0.0.1:5432:5432"
+    # Host'a port açılmaz; yerel geliştirmede docker-compose.override.yml 5432'yi açar.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -43,8 +42,10 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-enyakinsarj}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-enyakinsarj}?schema=public
-    ports:
-      - "3000:3000"
+    # Host portu bağlanmaz: Coolify / Traefik gibi bir reverse proxy konteynerin 3000 portuna yönlendirir.
+    # (Yerelde docker-compose.override.yml 3000'i host'a açar.)
+    expose:
+      - "3000"
     depends_on:
       db:
         condition: service_healthy
