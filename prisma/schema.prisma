@@ -1,0 +1,236 @@
+// En Yakın Şarj — veritabanı şeması (PostgreSQL)
+// İstasyon verisi Şarjağ API'sinden (console.sarjag.com) periyodik olarak senkronlanır;
+// site okuma trafiği Şarjağ'a değil bu veritabanına gider (token tasarrufu + hız).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────── Şarj ağları & istasyonlar ───────────────────────────
+
+model Provider {
+  id             String    @id // Şarjağ provider id: "zes", "esarj", "trugo" …
+  slug           String    @unique
+  name           String
+  website        String?
+  logoUrl        String?
+  description    String?
+  /// Yönetim panelinden düzenlenen / yapay zekâ ile üretilen SEO metni (markdown)
+  seoContent     String?   @db.Text
+  color          String? // Harita işaretçisi rengi (#hex)
+  stationCount   Int       @default(0)
+  dcStationCount Int       @default(0)
+  connectorCount Int       @default(0)
+  maxPowerKw     Float?
+  minAcPrice     Float?
+  maxAcPrice     Float?
+  minDcPrice     Float?
+  maxDcPrice     Float?
+  isActive       Boolean   @default(true)
+  lastSyncedAt   DateTime?
+  lastSyncError  String?
+  stations       Station[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model Station {
+  uid             String    @id // "zes:TR-ZES-0438"
+  slug            String    @unique
+  providerId      String
+  provider        Provider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  externalId      String
+  code            String?
+  name            String
+  operator        String?
+  access          String?
+  isRoaming       Boolean?
+  latitude        Float?
+  longitude       Float?
+  address         String?
+  district        String?
+  districtSlug    String?
+  city            String?
+  citySlug        String?
+  postalCode      String?
+  totalConnectors Int       @default(0)
+  maxPowerKw      Float?
+  hasAc           Boolean   @default(false)
+  hasDc           Boolean   @default(false)
+  standards       String[]
+  minAcPrice      Float?
+  minDcPrice      Float?
+  /// Şarjağ Connector[] (ham)
+  connectors      Json
+  /// Şarjağ Price[] (ham)
+  prices          Json
+  isActive        Boolean   @default(true)
+  sourceUpdatedAt DateTime?
+  syncedAt        DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+
+  @@index([providerId])
+  @@index([citySlug])
+  @@index([citySlug, districtSlug])
+  @@index([latitude, longitude])
+  @@index([maxPowerKw])
+  @@index([isActive])
+}
+
+enum SyncStatus {
+  RUNNING
+  SUCCESS
+  PARTIAL
+  FAILED
+}
+
+model SyncRun {
+  id               String     @id @default(cuid())
+  trigger          String // "cron" | "manual"
+  status           SyncStatus @default(RUNNING)
+  providersOk      Int        @default(0)
+  providersFailed  Int        @default(0)
+  stationsUpserted Int        @default(0)
+  stationsRemoved  Int        @default(0)
+  log              String?    @db.Text
+  startedAt        DateTime   @default(now())
+  finishedAt       DateTime?
+}
+
+// ─────────────────────────── Kullanıcılar ───────────────────────────
+
+enum Role {
+  ADMIN
+  EDITOR
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role     @default(EDITOR)
+  posts        Post[]
+  media        Media[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ─────────────────────────── Blog ───────────────────────────
+
+enum PostStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String?
+  posts       Post[]
+  createdAt   DateTime @default(now())
+}
+
+model Post {
+  id             String       @id @default(cuid())
+  slug           String       @unique
+  title          String
+  excerpt        String?
+  /// Markdown içerik
+  content        String       @db.Text
+  coverImageUrl  String?
+  coverImageAlt  String?
+  status         PostStatus   @default(DRAFT)
+  publishedAt    DateTime?
+  seoTitle       String?
+  seoDescription String?
+  keywords       String[]
+  tags           String[]
+  categoryId     String?
+  category       Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  authorId       String?
+  author         User?        @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  /// Yayınlanınca bağlı sosyal hesaplarda otomatik paylaş
+  autoShare      Boolean      @default(true)
+  /// Platforma özel paylaşım metinleri (yoksa şablondan üretilir)
+  socialX        String?
+  socialInstagram String?
+  sharedAt       DateTime?
+  aiGenerated    Boolean      @default(false)
+  viewCount      Int          @default(0)
+  socialPosts    SocialPost[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([status, publishedAt])
+}
+
+model Media {
+  id           String   @id @default(cuid())
+  key          String   @unique // bucket içindeki nesne adı
+  url          String
+  fileName     String
+  mimeType     String
+  size         Int
+  alt          String?
+  uploadedById String?
+  uploadedBy   User?    @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+}
+
+// ─────────────────────────── Sosyal medya ───────────────────────────
+
+enum SocialPlatform {
+  X
+  INSTAGRAM
+}
+
+enum SocialPostStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+model SocialAccount {
+  id                 String         @id @default(cuid())
+  platform           SocialPlatform @unique
+  enabled            Boolean        @default(false)
+  accountName        String?
+  /// AES-256-GCM ile şifrelenmiş kimlik bilgileri (JSON)
+  credentials        String?        @db.Text
+  /// Paylaşım şablonu: {title} {excerpt} {url} {tags}
+  template           String?
+  autoShareOnPublish Boolean        @default(true)
+  updatedAt          DateTime       @updatedAt
+  createdAt          DateTime       @default(now())
+}
+
+model SocialPost {
+  id         String           @id @default(cuid())
+  postId     String
+  post       Post             @relation(fields: [postId], references: [id], onDelete: Cascade)
+  platform   SocialPlatform
+  status     SocialPostStatus @default(PENDING)
+  message    String           @db.Text
+  externalId String?
+  url        String?
+  error      String?          @db.Text
+  createdAt  DateTime         @default(now())
+
+  @@index([postId])
+}
+
+// ─────────────────────────── Ayarlar ───────────────────────────
+
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
