@@ -43,6 +43,22 @@ ve site trafiği Şarjağ'a değil veritabanına gider (token tasarrufu + hız).
 - Şarj ağları: manuel/otomatik Şarjağ senkronu, ağ düzenleme (renk, logo, AI SEO metni)
 - Kullanıcılar: yönetici/editör rolleri
 
+## Veri koruması (kazımaya karşı)
+
+İstasyon verisinin yalnızca sitenin kendi arayüzünden okunabilmesi için (`src/server/guard.ts`, `src/trpc/secure-fetch.ts`):
+
+- **Oturum jetonu:** tarayıcı önce `/api/session`'dan 30 dakikalık imzalı bir jeton ve AES anahtarı alır. Oturum yalnızca
+  aynı kaynaktan gelen tarayıcı isteklerine verilir ve jeton alındığı tarayıcıya (User-Agent) bağlıdır.
+- **Şifreli taşıma:** `/api/trpc` yalnızca POST kabul eder; istek gövdesi ve yanıt AES-256-GCM ile şifrelidir. Ağ sekmesinde
+  istasyon, soket durumu veya arama verisi düz metin olarak görünmez; kopyalanan bir istek jetonun süresi dolunca çalışmaz.
+- **Hız sınırları (IP başına):** tRPC 240/dk, harita noktaları 20/dk, istasyon ayrıntısı 60/dk, arama 40/dk, anlık durum 20/dk,
+  oturum 40/saat, `/istasyon/*` sayfaları 120/dk.
+- **Şarjağ API anahtarı** hiçbir zaman tarayıcıya gönderilmez.
+
+Sınırlar: anahtar tarayıcıya verilmek zorunda olduğu için bu katman kararlı bir saldırganı durdurmaz, toplu veri çekmeyi
+zorlaştırır ve yavaşlatır. Arama motorlarının okuması gereken HTML sayfaları ve site haritası (SEO) doğası gereği herkese
+açıktır. Daha güçlü koruma için önüne bot yönetimi olan bir CDN / WAF (ör. Cloudflare) konabilir.
+
 ## Tasarım sistemi
 
 Kurallar `src/app/globals.css` içinde tanımlıdır:

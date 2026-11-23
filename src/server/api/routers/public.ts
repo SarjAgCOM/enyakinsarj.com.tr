@@ -34,15 +34,24 @@ const statusCache = new Map<string, { at: number; data: unknown }>();
 export const stationRouter = createTRPCRouter({
   mapPoints: publicProcedure
     .input(z.object({ providerId: z.string().max(40).optional(), citySlug: z.string().max(40).optional() }))
-    .query(({ input }) => getMapPoints(input)),
+    .query(({ input, ctx }) => {
+      // Tüm istasyon noktalarını döndüren pahalı çağrı: IP başına dakikada 20
+      rateLimit(`map:${ctx.ip}`, 20, 60_000);
+      return getMapPoints(input);
+    }),
 
-  byUid: publicProcedure.input(z.object({ uid: z.string().max(200) })).query(async ({ input }) => {
+  byUid: publicProcedure.input(z.object({ uid: z.string().max(200) })).query(async ({ input, ctx }) => {
+    // Tek tek istasyon çekerek veri toplamayı yavaşlatır
+    rateLimit(`uid:${ctx.ip}`, 60, 60_000);
     const s = await getStationByUid(input.uid);
     if (!s) throw new TRPCError({ code: "NOT_FOUND", message: "İstasyon bulunamadı" });
     return s;
   }),
 
-  search: publicProcedure.input(searchInput).query(({ input }) => searchStations(input)),
+  search: publicProcedure.input(searchInput).query(({ input, ctx }) => {
+    rateLimit(`search:${ctx.ip}`, 40, 60_000);
+    return searchStations(input);
+  }),
 
   liveStatus: publicProcedure.input(z.object({ uid: z.string().max(200) })).query(async ({ input, ctx }) => {
     const hit = statusCache.get(input.uid);

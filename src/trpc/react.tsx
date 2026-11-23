@@ -7,6 +7,7 @@ import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 import { useState } from "react";
 import superjson from "superjson";
 import type { AppRouter } from "@/server/api/root";
+import { secureFetch } from "./secure-fetch";
 
 export const { TRPCProvider, useTRPC, useTRPCClient } = createTRPCContext<AppRouter>();
 
@@ -36,7 +37,8 @@ export function TRPCReactProvider({ children }: { children: React.ReactNode }) {
           enabled: (op) =>
             process.env.NODE_ENV === "development" || (op.direction === "down" && op.result instanceof Error),
         }),
-        httpBatchLink({ url: "/api/trpc", transformer: superjson, maxURLLength: 2000 }),
+        // Tüm çağrılar POST'tur; gövde ve yanıt oturum anahtarıyla şifrelenir (bkz. ./secure-fetch.ts).
+        httpBatchLink({ url: "/api/trpc", transformer: superjson, methodOverride: "POST", fetch: secureFetch }),
       ],
     }),
   );
