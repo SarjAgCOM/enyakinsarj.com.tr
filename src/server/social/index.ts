@@ -90,7 +90,8 @@ export async function sharePost(postId: string, opts: { platforms?: SocialPlatfo
       } else {
         const creds = instagramCredentialsSchema.parse(decryptJson(account.credentials));
         if (!post.coverImageUrl) throw new Error("Instagram paylaşımı için kapak görseli gerekli.");
-        out = await postToInstagram(creds, { imageUrl: post.coverImageUrl, caption: message });
+        // Instagram görseli kendi sunucusundan indirir; adres tam (alan adlı) olmalı.
+        out = await postToInstagram(creds, { imageUrl: absoluteUrl(post.coverImageUrl), caption: message });
       }
       await db.socialPost.update({
         where: { id: log.id },

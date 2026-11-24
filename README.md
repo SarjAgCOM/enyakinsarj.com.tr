@@ -122,12 +122,12 @@ Tamamı `.env.example` içinde açıklamalıdır. Önemli olanlar:
 | `APP_SECRET` | Oturum imzası ve sosyal medya kimlik bilgilerinin şifrelenmesi (≥32 karakter) |
 | `CRON_SECRET` | `/api/cron` yetkilendirmesi |
 | `AI_PROVIDER`, `AI_API_KEY`, `AI_MODEL` | Yapay zekâ (panelde **Yapay zekâ** sayfasından da ayarlanır; oradaki kayıt bunların önüne geçer). Anahtar yoksa anahtarsız ücretsiz servis (`free`: yalnızca SEO ve sosyal medya metni, blog yazısı üretemez). Ücretsiz anahtarla `gemini` / `groq` / `openrouter`, ya da `anthropic` + `ANTHROPIC_API_KEY`. Ayrıntı `.env.example` içinde |
-| `OCI_*` | Oracle Object Storage: namespace, region, bucket, Customer Secret Key; bucket görselleri herkese açık olmalı (Instagram ve site için) |
+| `OCI_*` | Oracle Object Storage: namespace, region, bucket, Customer Secret Key. Görseller site üzerinden (`/medya/...`) sunulur; bucket özel kalabilir |
 | `NEXT_PUBLIC_SARJAG_PLAY_STORE_URL` | Şarjağ Android uygulama bağlantısı (boşsa Play Store araması açılır) |
 
 ## Oracle Object Storage kurulumu
 
-1. OCI Konsol → Object Storage → bucket oluşturun, **Visibility: Public** yapın.
+1. OCI Konsol → Object Storage → bucket oluşturun. Özel (private) kalabilir: görseller `/medya/...` rotasından sunulur.
 2. Profil → **Customer Secret Keys** → yeni anahtar; Access Key ve Secret'ı `OCI_ACCESS_KEY_ID` / `OCI_SECRET_ACCESS_KEY` olarak girin.
 3. `OCI_NAMESPACE` (Tenancy → Object Storage Namespace), `OCI_REGION`, `OCI_BUCKET` değerlerini doldurun.
 

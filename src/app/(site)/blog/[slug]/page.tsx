@@ -63,7 +63,7 @@ export default async function BlogPostPage({ params }: PageProps<"/blog/[slug]">
             "@type": "BlogPosting",
             headline: post.title,
             description: post.seoDescription ?? post.excerpt,
-            image: post.coverImageUrl ? [post.coverImageUrl] : undefined,
+            image: post.coverImageUrl ? [absoluteUrl(post.coverImageUrl)] : undefined,
             datePublished: post.publishedAt,
             dateModified: post.updatedAt,
             author: { "@type": post.author ? "Person" : "Organization", name: post.author?.name ?? site.name },

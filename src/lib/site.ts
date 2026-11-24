@@ -32,5 +32,7 @@ export const site = {
 } as const;
 
 export function absoluteUrl(path = "/") {
+  // Zaten tam adres ise (ör. CDN'deki görsel) olduğu gibi döner.
+  if (/^https?:\/\//i.test(path)) return path;
   return `${site.url}${path.startsWith("/") ? path : `/${path}`}`;
 }

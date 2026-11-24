@@ -31,6 +31,8 @@ const schema = z.object({
   OCI_ACCESS_KEY_ID: z.string().optional(),
   OCI_SECRET_ACCESS_KEY: z.string().optional(),
   OCI_PUBLIC_BASE_URL: z.string().optional(),
+  // S3 uyumlu uç noktayı elle vermek için (varsayılan: OCI compat adresi). Başka S3 uyumlu depolar ve testler için.
+  OCI_ENDPOINT: z.preprocess((v) => (v === "" ? undefined : v), z.string().url().optional()),
 });
 
 export type ServerEnv = z.infer<typeof schema>;

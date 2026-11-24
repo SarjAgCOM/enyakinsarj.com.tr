@@ -39,6 +39,28 @@ async function main() {
     console.warn("! ADMIN_EMAIL / ADMIN_PASSWORD tanımlı değil, yönetici oluşturulmadı.");
   }
   console.log("✓ Kategoriler hazır");
+  await migrateMediaUrls();
+}
+
+/**
+ * Eski kayıtlardaki doğrudan bucket adreslerini (objectstorage…/n/…/b/…/o/…) site üzerinden sunulan
+ * `/medya/…` adresine çevirir. Bucket özel olduğunda doğrudan adres 404 verir ve görseller kırık görünür.
+ * Tekrar çalıştırmak zararsızdır; OCI_PUBLIC_BASE_URL (CDN) kullanılıyorsa dokunulmaz.
+ */
+async function migrateMediaUrls() {
+  const { OCI_NAMESPACE: ns, OCI_BUCKET: bucket, OCI_PUBLIC_BASE_URL: cdn } = process.env;
+  if (!ns || !bucket || cdn) return;
+  const prefix = `https://objectstorage.${process.env.OCI_REGION || "eu-frankfurt-1"}.oraclecloud.com/n/${ns}/b/${bucket}/o/`;
+  const media = await db.$executeRaw`
+    UPDATE "Media" SET "url" = '/medya/' || substr("url", ${prefix.length + 1}) WHERE starts_with("url", ${prefix})`;
+  const covers = await db.$executeRaw`
+    UPDATE "Post" SET "coverImageUrl" = '/medya/' || substr("coverImageUrl", ${prefix.length + 1})
+    WHERE starts_with("coverImageUrl", ${prefix})`;
+  const bodies = await db.$executeRaw`
+    UPDATE "Post" SET "content" = replace("content", ${prefix}, '/medya/') WHERE position(${prefix} in "content") > 0`;
+  if (media + covers + bodies > 0) {
+    console.log(`✓ Görsel adresleri güncellendi: ${media} medya, ${covers} kapak, ${bodies} yazı içeriği`);
+  }
 }
 
 main()

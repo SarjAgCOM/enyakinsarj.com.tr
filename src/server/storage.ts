@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { DeleteObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { env } from "./env";
 import { slugify } from "@/lib/slug";
 
@@ -30,7 +30,7 @@ function s3() {
   const c = config();
   client = new S3Client({
     region: c.OCI_REGION,
-    endpoint: `https://${c.OCI_NAMESPACE}.compat.objectstorage.${c.OCI_REGION}.oraclecloud.com`,
+    endpoint: c.OCI_ENDPOINT ?? `https://${c.OCI_NAMESPACE}.compat.objectstorage.${c.OCI_REGION}.oraclecloud.com`,
     forcePathStyle: true,
     credentials: { accessKeyId: c.OCI_ACCESS_KEY_ID, secretAccessKey: c.OCI_SECRET_ACCESS_KEY },
     // OCI S3 uyumluluk katmanı yeni varsayılan checksum başlıklarını desteklemeyebilir
@@ -40,12 +40,35 @@ function s3() {
   return client;
 }
 
+/** Görsellerin sitenin kendi adresi üzerinden sunulduğu yol (bkz. src/app/medya/[...key]/route.ts). */
+export const MEDIA_ROUTE = "/medya";
+
+/**
+ * Yüklenen dosyanın adresi.
+ * Varsayılan olarak site üzerinden sunulur (`/medya/<anahtar>`): bucket'ın herkese açık olması gerekmez, sunucu
+ * dosyayı kendi kimlik bilgisiyle okur. OCI_PUBLIC_BASE_URL (CDN / kendi alan adınız) tanımlıysa o kullanılır.
+ */
 export function publicUrl(key: string) {
-  const c = config();
-  const base =
-    c.OCI_PUBLIC_BASE_URL?.replace(/\/+$/, "") ||
-    `https://objectstorage.${c.OCI_REGION}.oraclecloud.com/n/${c.OCI_NAMESPACE}/b/${c.OCI_BUCKET}/o`;
+  const base = config().OCI_PUBLIC_BASE_URL?.replace(/\/+$/, "") || MEDIA_ROUTE;
   return `${base}/${key.split("/").map(encodeURIComponent).join("/")}`;
+}
+
+/** Nesneyi bucket'tan okur. Bulunamazsa `null`. */
+export async function getObject(key: string) {
+  try {
+    const res = await s3().send(new GetObjectCommand({ Bucket: config().OCI_BUCKET, Key: key }));
+    if (!res.Body) return null;
+    return {
+      body: res.Body.transformToWebStream(),
+      contentType: res.ContentType ?? "application/octet-stream",
+      contentLength: res.ContentLength,
+      etag: res.ETag,
+    };
+  } catch (e) {
+    const err = e as { name?: string; $metadata?: { httpStatusCode?: number } };
+    if (err.name === "NoSuchKey" || err.name === "NotFound" || err.$metadata?.httpStatusCode === 404) return null;
+    throw e;
+  }
 }
 
 export const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif", "image/svg+xml"];
