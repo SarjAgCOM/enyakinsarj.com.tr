@@ -11,20 +11,29 @@ import { env } from "./env";
  *  - OpenAI uyumlu servisler: Gemini, Groq, OpenRouter veya herhangi bir uyumlu uç nokta. Bunların ücretsiz
  *    katmanları vardır; kotalar ve model adları sağlayıcıya göre değişir (bkz. .env.example).
  *
- * Sağlayıcı AI_PROVIDER ile seçilir. Seçilmemişse: AI_API_KEY varsa "gemini", yoksa ANTHROPIC_API_KEY ile "anthropic".
+ *  - free: anahtar ve hesap gerektirmeyen ücretsiz servis (Pollinations, açık kaynak model). Hiçbir anahtar
+ *    tanımlı değilse kendiliğinden kullanılır; böylece yapay zekâ özellikleri ek ayar olmadan çalışır.
+ *
+ * Sağlayıcı AI_PROVIDER ile seçilir. Seçilmemişse: AI_API_KEY varsa "gemini", yoksa ANTHROPIC_API_KEY varsa
+ * "anthropic", o da yoksa "free". Seçilen sağlayıcının anahtarı eksikse yine "free" kullanılır. "none" kapatır.
  * Her iki yolda da yanıt zod şemasıyla doğrulanır.
  */
 
 export class AiError extends Error {}
 
-type CompatProvider = "gemini" | "groq" | "openrouter" | "custom";
+type CompatProvider = "free" | "gemini" | "groq" | "openrouter" | "custom";
 type Provider = "anthropic" | CompatProvider;
 
 const PRESETS: Record<Exclude<CompatProvider, "custom">, { baseUrl: string; model?: string; label: string }> = {
+  // Anahtarsız (anonim) katman, ölçülen sınırlar (Kasım 2026): tek model (GPT-OSS 20B), IP başına 45 saniyede
+  // 1 yanıt, yanıt başına en fazla 1.500 jeton (yaklaşık 550 kelime). Bu yüzden yalnızca yönetim panelindeki kısa
+  // metinlerde (SEO meta, sosyal medya metni) kullanılır; çağrılar sıraya alınır. Blog yazısı gibi uzun içerik ve
+  // herkese açık arama için anahtarlı bir sağlayıcı gerekir.
+  free: { baseUrl: "https://text.pollinations.ai/openai", model: "openai", label: "Ücretsiz (Pollinations)" },
   gemini: { baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai", model: "gemini-flash-latest", label: "Google Gemini" },
   groq: { baseUrl: "https://api.groq.com/openai/v1", model: "openai/gpt-oss-120b", label: "Groq" },
-  // OpenRouter'da ücretsiz modeller ":free" ekiyle biter ve sık değişir; AI_MODEL ile belirtilmelidir.
-  openrouter: { baseUrl: "https://openrouter.ai/api/v1", label: "OpenRouter" },
+  // OpenRouter'da ücretsiz modeller ":free" ekiyle biter ve sık değişir; gerekirse AI_MODEL ile güncelleyin.
+  openrouter: { baseUrl: "https://openrouter.ai/api/v1", model: "google/gemma-4-31b-it:free", label: "OpenRouter" },
 };
 
 interface AiConfig {
@@ -38,8 +47,15 @@ interface AiConfig {
 /** Etkin sağlayıcı ayarı; yapılandırma eksikse `null`. */
 export function aiConfig(): AiConfig | null {
   const e = env();
-  const chosen = e.AI_PROVIDER ?? (e.AI_API_KEY ? "gemini" : e.ANTHROPIC_API_KEY ? "anthropic" : undefined);
-  if (!chosen) return null;
+  let chosen = e.AI_PROVIDER ?? (e.AI_API_KEY ? "gemini" : e.ANTHROPIC_API_KEY ? "anthropic" : "free");
+  if (chosen === "none") return null;
+  // Seçilen sağlayıcının anahtarı girilmemişse anahtarsız ücretsiz servise düşülür.
+  if (chosen === "anthropic" ? !e.ANTHROPIC_API_KEY : chosen !== "free" && !e.AI_API_KEY) chosen = "free";
+
+  if (chosen === "free") {
+    const preset = PRESETS.free;
+    return { provider: "free", label: preset.label, apiKey: "", model: preset.model!, baseUrl: preset.baseUrl };
+  }
 
   if (chosen === "anthropic") {
     if (!e.ANTHROPIC_API_KEY) return null;
@@ -58,8 +74,28 @@ export function aiConfig(): AiConfig | null {
 
 export const isAiConfigured = () => aiConfig() !== null;
 
-const NOT_CONFIGURED =
-  "Yapay zekâ servisi yapılandırılmamış. AI_PROVIDER ve AI_API_KEY (ücretsiz servisler) ya da ANTHROPIC_API_KEY tanımlayın.";
+/** Anahtarsız katman 45 saniyede 1 yanıt verdiği için ziyaretçi aramalarında kullanılmaz. */
+export const isAiSearchAvailable = () => {
+  const cfg = aiConfig();
+  return cfg !== null && cfg.provider !== "free";
+};
+
+// ── Anahtarsız katman için sıra: çağrılar tek tek ve en az FREE_INTERVAL_MS arayla gönderilir ──
+const FREE_INTERVAL_MS = 46_000;
+let freeQueue: Promise<void> = Promise.resolve();
+let freeNextAt = 0;
+
+function freeSlot(): Promise<void> {
+  const turn = freeQueue.then(async () => {
+    const wait = freeNextAt - Date.now();
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    freeNextAt = Date.now() + FREE_INTERVAL_MS;
+  });
+  freeQueue = turn.catch(() => {});
+  return turn;
+}
+
+const NOT_CONFIGURED = "Yapay zekâ kapalı (AI_PROVIDER=none) veya seçilen sağlayıcının ayarı eksik.";
 
 interface StructuredOptions<S extends z.ZodType> {
   system: string;
@@ -67,11 +103,24 @@ interface StructuredOptions<S extends z.ZodType> {
   schema: S;
   effort: "low" | "medium" | "high";
   maxTokens?: number;
+  /** Ziyaretçinin beklediği çağrılar (arama) için kısa süre sınırı; aşılırsa AiError. */
+  timeoutMs?: number;
 }
+
+/** Anahtarsız katmanın yanıt başına jeton sınırı. */
+const FREE_MAX_OUTPUT_TOKENS = 1500;
 
 async function structured<S extends z.ZodType>(opts: StructuredOptions<S>): Promise<z.infer<S>> {
   const cfg = aiConfig();
   if (!cfg) throw new AiError(NOT_CONFIGURED);
+  // Uzun içerik anahtarsız katmanın sınırına sığmaz; dakikalarca bekletip kesik yanıt almak yerine hemen bildirilir.
+  if (cfg.provider === "free" && (opts.maxTokens ?? 16000) > 4000) {
+    throw new AiError(
+      "Anahtarsız ücretsiz servis yanıt başına yaklaşık 500 kelimeyle sınırlı olduğu için blog yazısı gibi uzun içerik üretemez. " +
+        "Ücretsiz bir Gemini (aistudio.google.com/apikey) veya Groq (console.groq.com/keys) anahtarı alıp ortam değişkenlerine " +
+        "AI_PROVIDER ve AI_API_KEY olarak ekleyin.",
+    );
+  }
   return cfg.provider === "anthropic" ? viaAnthropic(cfg, opts) : viaOpenAiCompatible(cfg, opts);
 }
 
@@ -130,19 +179,20 @@ function extractJson(text: string): unknown {
   return JSON.parse(trimmed.slice(start, end + 1));
 }
 
-async function chat(cfg: AiConfig, messages: ChatMessage[], maxTokens: number, jsonMode: boolean) {
+async function chat(cfg: AiConfig, messages: ChatMessage[], maxTokens: number, jsonMode: boolean, timeoutMs = 180_000) {
   let res: Response;
   try {
     res = await fetch(`${cfg.baseUrl}/chat/completions`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${cfg.apiKey}` },
+      // Anahtarsız servislerde Authorization başlığı gönderilmez.
+      headers: { "Content-Type": "application/json", ...(cfg.apiKey ? { Authorization: `Bearer ${cfg.apiKey}` } : {}) },
       body: JSON.stringify({
         model: cfg.model,
         messages,
         max_tokens: maxTokens,
         ...(jsonMode ? { response_format: { type: "json_object" } } : {}),
       }),
-      signal: AbortSignal.timeout(180_000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
   } catch (e) {
     throw new AiError(`${cfg.label} servisine ulaşılamadı: ${(e as Error).message}`);
@@ -156,7 +206,11 @@ async function chat(cfg: AiConfig, messages: ChatMessage[], maxTokens: number, j
 
 async function viaOpenAiCompatible<S extends z.ZodType>(cfg: AiConfig, opts: StructuredOptions<S>): Promise<z.infer<S>> {
   // Ücretsiz katmanlarda dakikalık jeton sınırı düşüktür; çıktı üst sınırı buna göre tutulur.
-  const maxTokens = Math.min(opts.maxTokens ?? 8000, env().AI_MAX_TOKENS ?? 8000);
+  const maxTokens = Math.min(
+    opts.maxTokens ?? 8000,
+    env().AI_MAX_TOKENS ?? 8000,
+    cfg.provider === "free" ? FREE_MAX_OUTPUT_TOKENS : Infinity,
+  );
   const messages: ChatMessage[] = [
     {
       role: "system",
@@ -172,10 +226,23 @@ async function viaOpenAiCompatible<S extends z.ZodType>(cfg: AiConfig, opts: Str
   let jsonMode = true;
   let lastProblem = "";
   // En fazla 3 çağrı: JSON kipini desteklemeyen modelde kipsiz tekrar + şemaya uymayan yanıtta bir düzeltme turu.
+  let limitWaits = 0;
   for (let attempt = 0; attempt < 3; attempt++) {
-    const r = await chat(cfg, messages, maxTokens, jsonMode);
+    if (cfg.provider === "free") await freeSlot();
+    const r = await chat(cfg, messages, maxTokens, jsonMode, opts.timeoutMs);
 
     if (!r.ok) {
+      // Anahtarsız katmanın hız sınırı: servis kaç saniye beklenmesi gerektiğini bildirir; bekleyip yeniden denenir.
+      if (cfg.provider === "free" && (r.status === 402 || r.status === 429) && limitWaits < 2) {
+        const seconds = Number(/retry after (\d+)\s*s/i.exec(r.errorMessage ?? "")?.[1] ?? 45);
+        freeNextAt = Date.now() + (Math.min(seconds, 90) + 2) * 1000;
+        limitWaits++;
+        attempt--;
+        continue;
+      }
+      if (cfg.provider === "free" && (r.status === 402 || r.status === 429)) {
+        throw new AiError("Ücretsiz yapay zekâ servisi şu an yoğun. Bir dakika sonra yeniden deneyin.");
+      }
       if (r.status === 400 && jsonMode && /response_format|json_object|json mode/i.test(r.errorMessage ?? "")) {
         jsonMode = false;
         continue;
@@ -233,6 +300,7 @@ export async function parseSearchIntent(query: string, ctx: { providers: { id: s
   return structured({
     effort: "low",
     maxTokens: 4000,
+    timeoutMs: 20_000,
     schema: searchIntentSchema,
     system:
       "Türkiye'deki elektrikli araç şarj istasyonu arama asistanısın. Kullanıcının doğal dildeki isteğini arama filtrelerine çevir. " +

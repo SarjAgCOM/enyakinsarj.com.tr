@@ -121,7 +121,7 @@ Tamamı `.env.example` içinde açıklamalıdır. Önemli olanlar:
 | `SARJAG_API_KEY` | console.sarjag.com → Proje → API anahtarı (`sk_live_…`). Yalnızca sunucuda kullanılır. |
 | `APP_SECRET` | Oturum imzası ve sosyal medya kimlik bilgilerinin şifrelenmesi (≥32 karakter) |
 | `CRON_SECRET` | `/api/cron` yetkilendirmesi |
-| `AI_PROVIDER`, `AI_API_KEY`, `AI_MODEL` | Yapay zekâ: `gemini` / `groq` / `openrouter` (ücretsiz katman) veya `anthropic` + `ANTHROPIC_API_KEY`. Ayrıntı `.env.example` içinde |
+| `AI_PROVIDER`, `AI_API_KEY`, `AI_MODEL` | Yapay zekâ. Anahtar yoksa anahtarsız ücretsiz servis (`free`: yalnızca SEO ve sosyal medya metni, blog yazısı üretemez). Ücretsiz anahtarla `gemini` / `groq` / `openrouter`, ya da `anthropic` + `ANTHROPIC_API_KEY`. Ayrıntı `.env.example` içinde |
 | `OCI_*` | Oracle Object Storage: namespace, region, bucket, Customer Secret Key; bucket görselleri herkese açık olmalı (Instagram ve site için) |
 | `NEXT_PUBLIC_SARJAG_PLAY_STORE_URL` | Şarjağ Android uygulama bağlantısı (boşsa Play Store araması açılır) |
 

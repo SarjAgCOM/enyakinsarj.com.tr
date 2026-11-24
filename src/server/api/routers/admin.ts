@@ -226,7 +226,11 @@ const mediaRouter = createTRPCRouter({
 // ─────────────────────────── Yapay zekâ ───────────────────────────
 
 const aiAdminRouter = createTRPCRouter({
-  status: editorProcedure.query(() => ({ configured: isAiConfigured() })),
+  status: editorProcedure.query(() => {
+    const cfg = aiConfig();
+    // limited: anahtarsız ücretsiz katman; yalnızca kısa metinler (SEO, sosyal) üretilebilir, çağrılar sıraya alınır.
+    return { configured: isAiConfigured(), label: cfg?.label ?? null, limited: cfg?.provider === "free" };
+  }),
 
   generatePost: editorProcedure
     .input(

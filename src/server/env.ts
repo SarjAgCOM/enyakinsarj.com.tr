@@ -14,7 +14,12 @@ const schema = z.object({
   SARJAG_API_URL: z.string().url().default("https://console.sarjag.com/api/v1"),
   SYNC_INTERVAL_HOURS: z.coerce.number().positive().default(24),
   // Yapay zekâ: "anthropic" (Claude) veya OpenAI uyumlu ücretsiz servisler (bkz. src/server/ai.ts)
-  AI_PROVIDER: z.enum(["anthropic", "gemini", "groq", "openrouter", "custom"]).optional(),
+  // "free": anahtar gerektirmeyen ücretsiz servis (hiçbir anahtar yoksa varsayılan). "none": yapay zekâyı kapatır.
+  // Boş değer (AI_PROVIDER=) tanımsız sayılır.
+  AI_PROVIDER: z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z.enum(["free", "anthropic", "gemini", "groq", "openrouter", "custom", "none"]).optional(),
+  ),
   AI_API_KEY: z.string().optional(),
   AI_BASE_URL: z.string().url().optional(),
   AI_MODEL: z.string().optional(),

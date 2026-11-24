@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { CircleNotchIcon, SparkleIcon } from "@phosphor-icons/react/ssr";
 import { toast } from "sonner";
 import { useTRPC, type RouterOutputs } from "@/trpc/react";
@@ -31,6 +31,8 @@ export function AiGenerateDialog({
   const [instructions, setInstructions] = useState("");
   const [useSiteData, setUseSiteData] = useState(true);
 
+  const status = useQuery({ ...trpc.admin.ai.status.queryOptions(), enabled: open });
+
   const gen = useMutation(
     trpc.admin.ai.generatePost.mutationOptions({
       onSuccess: (data) => {
@@ -55,6 +57,13 @@ export function AiGenerateDialog({
           <DialogDescription>
             Yapay zekâ; başlık, SEO meta, içerik, etiketler ve X/Instagram metinlerini birlikte üretir. Sitedeki güncel istasyon ve
             fiyat verileri bağlam olarak eklenebilir.
+            {status.data?.limited && (
+              <span role="alert" className="mt-2 block text-destructive">
+                Şu an anahtarsız ücretsiz servis etkin. Bu servis yalnızca kısa metin (SEO ve sosyal medya) üretebilir, blog
+                yazısı üretemez. Blog üretimi için ortam değişkenlerine ücretsiz bir Gemini veya Groq anahtarı ekleyin
+                (AI_PROVIDER ve AI_API_KEY).
+              </span>
+            )}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">

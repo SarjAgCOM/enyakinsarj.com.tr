@@ -9,7 +9,7 @@ import {
   getCityTable,
 } from "../../services/stations";
 import { sarjag, SarjagError } from "../../sarjag/client";
-import { isAiConfigured, parseSearchIntent } from "../../ai";
+import { AiError, isAiSearchAvailable, parseSearchIntent } from "../../ai";
 import { PROVINCES, matchProvince } from "@/lib/turkey";
 import { slugify } from "@/lib/slug";
 
@@ -98,8 +98,9 @@ export const aiRouter = createTRPCRouter({
   search: publicProcedure
     .input(z.object({ query: z.string().min(3).max(300), location: latLng.optional() }))
     .mutation(async ({ input, ctx }) => {
-      if (!isAiConfigured()) {
-        // Yapay zekâ yapılandırılmamışsa sezgisel ayrıştırmaya düş: il, ağ, DC, kW ve "yakın" ifadelerini yakala.
+      // Sezgisel ayrıştırma: il, ağ, DC, kW ve "yakın" ifadelerini yakalar. Yapay zekâ kapalıyken ya da
+      // hata verdiğinde (kota, zaman aşımı) kullanılır; böylece arama her durumda sonuç döndürür.
+      const heuristicSearch = async () => {
         const providers = await listProviders();
         const h = heuristicIntent(input.query, providers);
         const near = h.useMyLocation && input.location ? { ...input.location, radiusKm: 30 } : undefined;
@@ -119,17 +120,25 @@ export const aiRouter = createTRPCRouter({
           results,
           needsLocation: h.useMyLocation && !input.location,
         };
-      }
+      };
+      if (!isAiSearchAvailable()) return heuristicSearch();
       rateLimit(`ai:${ctx.ip}`, 8, 60_000);
       const providers = await listProviders();
       const cityTable = await getCityTable();
-      const intent = await parseSearchIntent(input.query, {
-        providers: providers.map((p) => ({ id: p.id, name: p.name })),
-        cities: PROVINCES.filter((p) => cityTable.find((c) => c.slug === p.slug && c.count > 0)).map((p) => ({
-          slug: p.slug,
-          name: p.name,
-        })),
-      });
+      let intent;
+      try {
+        intent = await parseSearchIntent(input.query, {
+          providers: providers.map((p) => ({ id: p.id, name: p.name })),
+          cities: PROVINCES.filter((p) => cityTable.find((c) => c.slug === p.slug && c.count > 0)).map((p) => ({
+            slug: p.slug,
+            name: p.name,
+          })),
+        });
+      } catch (e) {
+        if (!(e instanceof AiError)) throw e;
+        console.warn(`Yapay zekâ araması başarısız, sezgisel aramaya düşüldü: ${e.message}`);
+        return heuristicSearch();
+      }
       const validProviders = intent.providerIds.filter((id) => providers.some((p) => p.id === id));
       const near = intent.useMyLocation && input.location ? { ...input.location, radiusKm: 30 } : undefined;
       const results = await searchStations({
