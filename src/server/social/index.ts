@@ -4,7 +4,7 @@ import { db } from "../db";
 import { decryptJson, encryptJson } from "../crypto";
 import { absoluteUrl } from "@/lib/site";
 import { fitTweet, postToX, verifyX, xCredentialsSchema } from "./x";
-import { instagramCredentialsSchema, postToInstagram, verifyInstagram } from "./instagram";
+import { instagramCredentialsSchema, postCarouselToInstagram, postToInstagram, verifyInstagram } from "./instagram";
 
 export const PLATFORMS: SocialPlatform[] = ["X", "INSTAGRAM"];
 
@@ -89,9 +89,19 @@ export async function sharePost(postId: string, opts: { platforms?: SocialPlatfo
         out = await postToX(creds, message);
       } else {
         const creds = instagramCredentialsSchema.parse(decryptJson(account.credentials));
-        if (!post.coverImageUrl) throw new Error("Instagram paylaşımı için kapak görseli gerekli.");
         // Instagram görseli kendi sunucusundan indirir; adres tam (alan adlı) olmalı.
-        out = await postToInstagram(creds, { imageUrl: absoluteUrl(post.coverImageUrl), caption: message });
+        if (post.coverImageUrl) {
+          out = await postToInstagram(creds, { imageUrl: absoluteUrl(post.coverImageUrl), caption: message });
+        } else {
+          // Kapak yüklenmemişse sitenin ürettiği kare görseller kullanılır: kapak + öne çıkan maddelerin kartları.
+          const base = absoluteUrl(`/kapak/${post.slug}.jpg?b=kare`);
+          const imageUrls = [base, ...post.highlights.slice(0, 4).map((_, i) => `${base}&n=${i + 1}`)];
+          out = await postCarouselToInstagram(creds, { imageUrls, caption: message }).catch((e: Error) => {
+            // Dizi oluşturulamazsa tek görselle paylaşım denenir.
+            if (imageUrls.length < 2) throw e;
+            return postToInstagram(creds, { imageUrl: base, caption: message });
+          });
+        }
       }
       await db.socialPost.update({
         where: { id: log.id },

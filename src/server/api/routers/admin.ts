@@ -6,9 +6,17 @@ import { adminProcedure, createTRPCRouter, editorProcedure } from "../trpc";
 import { slugify } from "@/lib/slug";
 import { fmtInt, fmtTl } from "@/lib/format";
 import { db } from "../../db";
-import { publishPost, revalidatePosts } from "../../services/posts";
+import { publishPost, revalidatePosts, uniquePostSlug } from "../../services/posts";
 import { getCityTable, getPriceTable, getStats, listProviders } from "../../services/stations";
 import { runSync } from "../../services/sync";
+import {
+  ensureDefaultSources,
+  fetchNewsSources,
+  generateFromNewsItem,
+  getNewsSettings,
+  saveNewsSettings,
+  validateFeed,
+} from "../../services/news";
 import { CACHE_TAGS } from "../../services/cache-tags";
 import { sarjag } from "../../sarjag/client";
 import {
@@ -22,6 +30,7 @@ import {
   generateSeoMeta,
   generateSocialCopy,
   getPanelAiSettings,
+  isAiLongFormAvailable,
   savePanelAiSettings,
   testAiConnection,
 } from "../../ai";
@@ -48,16 +57,6 @@ const postFields = z.object({
   socialInstagram: nullableText(2200),
   aiGenerated: z.boolean().optional(),
 });
-
-async function uniquePostSlug(base: string, excludeId?: string) {
-  const root = slugify(base, 90) || "yazi";
-  let slug = root;
-  for (let i = 2; ; i++) {
-    const hit = await db.post.findUnique({ where: { slug }, select: { id: true } });
-    if (!hit || hit.id === excludeId) return slug;
-    slug = `${root}-${i}`;
-  }
-}
 
 async function buildDataContext() {
   const [stats, prices, cities, providers] = await Promise.all([getStats(), getPriceTable(), getCityTable(), listProviders()]);
@@ -515,6 +514,118 @@ const userRouter = createTRPCRouter({
     }),
 });
 
+// ─────────────────────────── Haber akışı ───────────────────────────
+
+const newsStatus = z.enum(["NEW", "GENERATED", "SKIPPED", "FAILED"]);
+
+const newsRouter = createTRPCRouter({
+  overview: editorProcedure.query(async ({ ctx }) => {
+    await ensureDefaultSources();
+    const [settings, sources, counts, aiReady, today] = await Promise.all([
+      getNewsSettings(),
+      db.newsSource.findMany({ orderBy: [{ enabled: "desc" }, { name: "asc" }] }),
+      db.newsItem.groupBy({ by: ["status"], _count: true }),
+      isAiLongFormAvailable(),
+      db.post.count({ where: { sourceUrl: { not: null }, createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } } }),
+    ]);
+    return {
+      settings,
+      sources,
+      counts: Object.fromEntries(counts.map((c) => [c.status, c._count])) as Partial<Record<z.infer<typeof newsStatus>, number>>,
+      aiReady,
+      today,
+      // Ayarları ve kaynakları yalnızca yönetici değiştirebilir
+      isAdmin: ctx.user.role === "ADMIN",
+    };
+  }),
+
+  items: editorProcedure
+    .input(z.object({ status: newsStatus.default("NEW"), page: z.number().int().min(1).default(1) }))
+    .query(async ({ input }) => {
+      const take = 25;
+      const where = { status: input.status };
+      const [items, total] = await Promise.all([
+        db.newsItem.findMany({
+          where,
+          orderBy: [{ publishedAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
+          skip: (input.page - 1) * take,
+          take,
+          select: {
+            id: true,
+            title: true,
+            url: true,
+            publishedAt: true,
+            createdAt: true,
+            note: true,
+            status: true,
+            source: { select: { name: true } },
+            post: { select: { id: true, slug: true, status: true, title: true } },
+          },
+        }),
+        db.newsItem.count({ where }),
+      ]);
+      return { items, total, pages: Math.max(1, Math.ceil(total / take)) };
+    }),
+
+  saveSettings: adminProcedure
+    .input(
+      z.object({
+        enabled: z.boolean(),
+        autoPublish: z.boolean(),
+        dailyLimit: z.number().int().min(1).max(50),
+        intervalMinutes: z.number().int().min(15).max(1440),
+      }),
+    )
+    .mutation(({ input }) => saveNewsSettings(input)),
+
+  addSource: adminProcedure
+    .input(z.object({ name: z.string().trim().min(2).max(80), feedUrl: z.string().trim().url().max(500) }))
+    .mutation(async ({ input }) => {
+      if (await db.newsSource.findUnique({ where: { feedUrl: input.feedUrl } })) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Bu akış zaten ekli." });
+      }
+      // Kaydetmeden önce akışın gerçekten okunabildiği doğrulanır.
+      const check = await validateFeed(input.feedUrl).catch((e: Error) => {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `Akış okunamadı: ${e.message}` });
+      });
+      const source = await db.newsSource.create({ data: input });
+      return { source, ...check };
+    }),
+
+  updateSource: adminProcedure
+    .input(z.object({ id: z.string(), enabled: z.boolean() }))
+    .mutation(({ input }) => db.newsSource.update({ where: { id: input.id }, data: { enabled: input.enabled } })),
+
+  deleteSource: adminProcedure.input(z.object({ id: z.string() })).mutation(async ({ input }) => {
+    await db.newsSource.delete({ where: { id: input.id } });
+    return { ok: true };
+  }),
+
+  /** Etkin kaynakları hemen tarar (yalnızca kuyruğa alır, yazı üretmez). */
+  fetchNow: editorProcedure.mutation(() => fetchNewsSources()),
+
+  generate: editorProcedure.input(z.object({ id: z.string(), publish: z.boolean() })).mutation(async ({ input, ctx }) => {
+    try {
+      return await generateFromNewsItem(input.id, { publish: input.publish, authorId: ctx.user.id });
+    } catch (e) {
+      if (e instanceof AiError) throw new TRPCError({ code: "BAD_REQUEST", message: e.message });
+      throw e;
+    }
+  }),
+
+  /** Haberi kuyruktan çıkarır ya da yeniden kuyruğa alır. */
+  setStatus: editorProcedure
+    .input(z.object({ id: z.string(), status: z.enum(["NEW", "SKIPPED"]) }))
+    .mutation(async ({ input }) => {
+      // Yazısı üretilmiş haberlerin durumu değiştirilmez.
+      const { count } = await db.newsItem.updateMany({
+        where: { id: input.id, post: { is: null } },
+        data: { status: input.status, note: input.status === "SKIPPED" ? "Elle atlandı" : null },
+      });
+      return { ok: count > 0 };
+    }),
+});
+
 // ─────────────────────────── Pano ───────────────────────────
 
 const dashboardRouter = createTRPCRouter({
@@ -554,6 +665,7 @@ export const adminRouter = createTRPCRouter({
   category: categoryRouter,
   media: mediaRouter,
   ai: aiAdminRouter,
+  news: newsRouter,
   social: socialRouter,
   sync: syncRouter,
   provider: providerAdminRouter,

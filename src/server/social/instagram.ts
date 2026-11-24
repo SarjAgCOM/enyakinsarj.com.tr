@@ -30,36 +30,65 @@ async function graph<T>(path: string, params: Record<string, string>, method: "G
   return json;
 }
 
+/** Medya kapsayıcısının işlenmesini bekler (Instagram görseli kendi sunucusuna indirir). */
+async function waitUntilReady(creds: InstagramCredentials, containerId: string) {
+  for (let i = 0; i < 15; i++) {
+    const status = await graph<{ status_code?: string }>(containerId, { fields: "status_code", access_token: creds.accessToken }, "GET");
+    if (status.status_code === "FINISHED") return;
+    if (status.status_code === "ERROR" || status.status_code === "EXPIRED") {
+      throw new Error(`Instagram medya işlenemedi (${status.status_code}). Görsel herkese açık bir JPEG olmalı.`);
+    }
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+}
+
+async function publish(creds: InstagramCredentials, containerId: string) {
+  const published = await graph<{ id: string }>(`${creds.igUserId}/media_publish`, {
+    creation_id: containerId,
+    access_token: creds.accessToken,
+  });
+  const info = await graph<{ permalink?: string }>(published.id, { fields: "permalink", access_token: creds.accessToken }, "GET").catch(
+    () => ({ permalink: undefined }),
+  );
+  return { externalId: published.id, url: info.permalink ?? null };
+}
+
 export async function postToInstagram(creds: InstagramCredentials, input: { imageUrl: string; caption: string }) {
   const container = await graph<{ id: string }>(`${creds.igUserId}/media`, {
     image_url: input.imageUrl,
     caption: input.caption.slice(0, 2200),
     access_token: creds.accessToken,
   });
+  await waitUntilReady(creds, container.id);
+  return publish(creds, container.id);
+}
 
-  for (let i = 0; i < 15; i++) {
-    const status = await graph<{ status_code?: string }>(
-      container.id,
-      { fields: "status_code", access_token: creds.accessToken },
-      "GET",
-    );
-    if (status.status_code === "FINISHED") break;
-    if (status.status_code === "ERROR" || status.status_code === "EXPIRED") {
-      throw new Error(`Instagram medya işlenemedi (${status.status_code}). Görsel herkese açık bir JPEG/PNG olmalı.`);
-    }
-    await new Promise((r) => setTimeout(r, 2000));
+/**
+ * Birden fazla görseli tek gönderide (kaydırmalı dizi) paylaşır. Instagram 2 ile 10 arası görsel kabul eder
+ * ve tüm görselleri ilkinin en-boy oranına göre kırpar; bu yüzden hepsi aynı oranda (kare) verilmelidir.
+ */
+export async function postCarouselToInstagram(creds: InstagramCredentials, input: { imageUrls: string[]; caption: string }) {
+  const urls = input.imageUrls.slice(0, 10);
+  if (urls.length < 2) return postToInstagram(creds, { imageUrl: urls[0], caption: input.caption });
+
+  const children: string[] = [];
+  for (const image_url of urls) {
+    const child = await graph<{ id: string }>(`${creds.igUserId}/media`, {
+      image_url,
+      is_carousel_item: "true",
+      access_token: creds.accessToken,
+    });
+    await waitUntilReady(creds, child.id);
+    children.push(child.id);
   }
-
-  const published = await graph<{ id: string }>(`${creds.igUserId}/media_publish`, {
-    creation_id: container.id,
+  const parent = await graph<{ id: string }>(`${creds.igUserId}/media`, {
+    media_type: "CAROUSEL",
+    children: children.join(","),
+    caption: input.caption.slice(0, 2200),
     access_token: creds.accessToken,
   });
-  const info = await graph<{ permalink?: string }>(
-    published.id,
-    { fields: "permalink", access_token: creds.accessToken },
-    "GET",
-  ).catch(() => ({ permalink: undefined }));
-  return { externalId: published.id, url: info.permalink ?? null };
+  await waitUntilReady(creds, parent.id);
+  return publish(creds, parent.id);
 }
 
 export async function verifyInstagram(creds: InstagramCredentials) {

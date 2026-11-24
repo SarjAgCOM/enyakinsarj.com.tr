@@ -181,6 +181,12 @@ export const AI_PROVIDER_INFO: { id: AiProviderChoice; label: string; needsKey: 
 
 export const isAiConfigured = async () => (await aiConfig()) !== null;
 
+/** Uzun içerik (blog yazısı, haber) üretilebilir mi: anahtarlı bir sağlayıcı gerekir. */
+export const isAiLongFormAvailable = async () => {
+  const cfg = await aiConfig();
+  return cfg !== null && cfg.provider !== "free";
+};
+
 /** Anahtarsız katman 45 saniyede 1 yanıt verdiği için ziyaretçi aramalarında kullanılmaz. */
 export const isAiSearchAvailable = async () => {
   const cfg = await aiConfig();
@@ -528,6 +534,56 @@ export async function generateProviderContent(input: { name: string; website?: s
     prompt: `Şarj ağı: ${input.name}\nWeb sitesi: ${input.website ?? "-"}\n\nGüncel veriler:\n${input.stats}`,
   });
   return out.content;
+}
+
+// ─────────────────────────── Haber akışından özgün haber ───────────────────────────
+
+export const generatedNewsSchema = generatedPostSchema.extend({
+  relevant: z
+    .boolean()
+    .describe("Haber elektrikli araçlar, şarj altyapısı, bataryalar veya e-mobilite ile doğrudan ilgiliyse true"),
+  highlights: z.array(z.string()).describe("Haberin öne çıkan 3 maddesi; her biri tek kısa cümle, en fazla 90 karakter"),
+});
+export type GeneratedNews = z.infer<typeof generatedNewsSchema>;
+
+/**
+ * Başka bir yayında çıkan haberin olgularından yola çıkarak özgün bir haber yazar.
+ * Kaynak metin yalnızca bilgi içindir: cümleler kopyalanmaz, kaynakta olmayan bilgi eklenmez.
+ */
+export async function generateNewsPost(input: {
+  title: string;
+  summary: string;
+  body: string;
+  sourceName: string;
+  publishedAt?: Date | null;
+}) {
+  return structured({
+    effort: "medium",
+    maxTokens: 6000,
+    schema: generatedNewsSchema,
+    system:
+      "Sen enyakinsarj.com.tr için yazan, Türkiye elektrikli araç (EV) ve şarj altyapısı konusunda uzman bir haber editörüsün. " +
+      "Sana başka bir yayında çıkmış bir haberin başlığı ve metni BİLGİ KAYNAĞI olarak verilir. Görevin bu olgulardan " +
+      "tamamen kendi cümlelerinle, özgün bir haber yazmak.\n\nKurallar:\n" +
+      "- Kaynak metindeki cümleleri, cümle yapılarını ve ayırt edici ifadeleri KOPYALAMA; yeniden kur. Başlık da özgün olmalı.\n" +
+      "- Yalnızca kaynakta geçen olguları kullan. Rakam, tarih, fiyat, alıntı veya isim UYDURMA. Emin olmadığın şeyi yazma.\n" +
+      "- Birinin sözünü aktarıyorsan dolaylı anlatım kullan ve kimin söylediğini belirt.\n" +
+      "- Kaynak yayının adını metinde anma ve 'Kaynak' satırı ekleme; atıf sistem tarafından ayrıca eklenir.\n" +
+      "- Uzunluk: eldeki bilgi kadar, 250 ile 450 kelime arası. Bilgi azsa kısa yaz, doldurma yapma.\n" +
+      "- Biçim: ilk paragraf haberin özünü versin; ardından 2 veya 3 adet H2 başlık (## ) altında ayrıntılar. H1 kullanma.\n" +
+      "- Türkiye'deki sürücüleri ilgilendiren bir yön varsa kısaca belirt. Uygun düşerse en fazla iki iç bağlantı ver: " +
+      "/sarj-haritasi, /sarj-fiyatlari, /sarj-aglari, /hesaplayicilar/sarj-maliyeti.\n" +
+      "- Haber elektrikli araçlar, şarj, batarya veya e-mobilite ile doğrudan ilgili değilse relevant=false döndür ve " +
+      "diğer alanları boş bırak (boş metin, boş dizi).",
+    prompt: [
+      `Kaynak başlık: ${input.title}`,
+      input.publishedAt ? `Yayın tarihi: ${input.publishedAt.toISOString().slice(0, 10)}` : "",
+      input.summary ? `Kaynak özet: ${input.summary.slice(0, 1500)}` : "",
+      input.body ? `\nKaynak metin (yalnızca bilgi için):\n${input.body.slice(0, 6000)}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  });
 }
 
 // ─────────────────────────── Bağlantı testi (yönetim paneli) ───────────────────────────

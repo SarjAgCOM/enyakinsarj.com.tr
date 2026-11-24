@@ -38,7 +38,8 @@ export async function generateMetadata({ params }: PageProps<"/blog/[slug]">): P
       modifiedTime: post.updatedAt,
       section: post.category?.name,
       tags: post.tags,
-      ...(post.coverImageUrl ? { images: [{ url: post.coverImageUrl, alt: post.coverImageAlt ?? post.title }] } : {}),
+      // Kapak yüklenmemişse sitenin ürettiği görsel kullanılır (bkz. /kapak rotası).
+      images: [{ url: post.coverImageUrl ?? `/kapak/${post.slug}.jpg`, alt: post.coverImageAlt ?? post.title }],
     },
     twitter: { card: "summary_large_image", title, description },
   };
@@ -63,7 +64,8 @@ export default async function BlogPostPage({ params }: PageProps<"/blog/[slug]">
             "@type": "BlogPosting",
             headline: post.title,
             description: post.seoDescription ?? post.excerpt,
-            image: post.coverImageUrl ? [absoluteUrl(post.coverImageUrl)] : undefined,
+            image: [absoluteUrl(post.coverImageUrl ?? `/kapak/${post.slug}.jpg`)],
+            ...(post.sourceUrl ? { isBasedOn: post.sourceUrl } : {}),
             datePublished: post.publishedAt,
             dateModified: post.updatedAt,
             author: { "@type": post.author ? "Person" : "Organization", name: post.author?.name ?? site.name },
@@ -124,6 +126,15 @@ export default async function BlogPostPage({ params }: PageProps<"/blog/[slug]">
       <div className="mx-auto grid max-w-5xl gap-10 lg:grid-cols-[1fr_220px]">
         <div className="min-w-0">
           <Markdown content={post.content} />
+          {post.sourceUrl && (
+            <p className="caption-2 mt-8 text-muted-foreground">
+              Bu haber{" "}
+              <a href={post.sourceUrl} target="_blank" rel="noopener nofollow" className="underline underline-offset-4 hover:text-foreground">
+                {post.sourceName ?? "kaynak yayın"}
+              </a>{" "}
+              haberindeki bilgilerden yararlanılarak hazırlanmıştır.
+            </p>
+          )}
           {post.tags.length > 0 && (
             <div className="mt-10 flex flex-wrap gap-2">
               {post.tags.map((t) => (

@@ -164,6 +164,12 @@ model Post {
   socialInstagram String?
   sharedAt       DateTime?
   aiGenerated    Boolean      @default(false)
+  /// Öne çıkan 2-4 kısa madde; sosyal medya görsel dizisinde (carousel) kullanılır
+  highlights     String[]     @default([])
+  /// Haber akışından üretilen yazılarda atıf yapılan kaynak
+  sourceName     String?
+  sourceUrl      String?
+  newsItem       NewsItem?
   viewCount      Int          @default(0)
   socialPosts    SocialPost[]
   createdAt      DateTime     @default(now())
@@ -225,6 +231,48 @@ model SocialPost {
   createdAt  DateTime         @default(now())
 
   @@index([postId])
+}
+
+// ─────────────────────────── Haber akışı (RSS) ───────────────────────────
+
+enum NewsItemStatus {
+  NEW
+  GENERATED
+  SKIPPED
+  FAILED
+}
+
+model NewsSource {
+  id            String     @id @default(cuid())
+  name          String
+  feedUrl       String     @unique
+  enabled       Boolean    @default(true)
+  lastFetchedAt DateTime?
+  lastError     String?
+  items         NewsItem[]
+  createdAt     DateTime   @default(now())
+}
+
+model NewsItem {
+  id          String         @id @default(cuid())
+  sourceId    String
+  source      NewsSource     @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  /// Akıştaki benzersiz kimlik (guid, yoksa bağlantı)
+  guid        String
+  url         String
+  title       String
+  /// Akışın verdiği özet (düz metin, kısaltılmış)
+  summary     String?        @db.Text
+  publishedAt DateTime?
+  status      NewsItemStatus @default(NEW)
+  /// Atlanma nedeni veya hata mesajı
+  note        String?
+  postId      String?        @unique
+  post        Post?          @relation(fields: [postId], references: [id], onDelete: SetNull)
+  createdAt   DateTime       @default(now())
+
+  @@unique([sourceId, guid])
+  @@index([status, publishedAt])
 }
 
 // ─────────────────────────── Ayarlar ───────────────────────────

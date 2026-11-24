@@ -43,6 +43,20 @@ ve site trafiği Şarjağ'a değil veritabanına gider (token tasarrufu + hız).
 - Şarj ağları: manuel/otomatik Şarjağ senkronu, ağ düzenleme (renk, logo, AI SEO metni)
 - Kullanıcılar: yönetici/editör rolleri
 
+## Haber akışı (RSS → özgün haber)
+
+Yönetim paneli → **Haber akışı** (`src/server/services/news.ts`, `src/lib/feed.ts`):
+
+- **Kaynaklar:** Türkiye'deki otomobil ve teknoloji yayınlarının RSS akışları (varsayılan liste hazır gelir, panelden eklenip
+  kapatılabilir). Yalnızca elektrikli araç / şarj konulu haberler kuyruğa alınır; aynı haber birden fazla kaynakta çıkarsa biri işlenir.
+- **Üretim:** Yapay zekâ, kaynak haberdeki olgulardan kendi cümleleriyle özgün bir haber yazar (başlık, içerik, SEO, sosyal medya
+  metni, öne çıkan maddeler). Yazı "Haberler" kategorisine girer ve altında kaynağa bağlantı verilir. Anahtarlı bir yapay zekâ
+  sağlayıcısı gerekir.
+- **Otomasyon:** Açıldığında cron kaynakları düzenli tarar ve günlük sınıra kadar haber üretir. "Doğrudan yayınla" kapalıysa haberler
+  taslak olarak bekler (önerilen); açıksa kontrol edilmeden yayınlanır ve bağlı sosyal hesaplarda paylaşılır.
+- **Görseller:** Kaynak sitelerin fotoğrafları telifli olduğu için ALINMAZ. Kapak yüklenmemiş yazılarda site kendi görselini üretir
+  (`/kapak/<slug>.jpg`): bağlantı önizlemesinde kullanılır, Instagram'da kapak + öne çıkan maddelerden oluşan görsel dizisi paylaşılır.
+
 ## Veri koruması (kazımaya karşı)
 
 İstasyon verisinin yalnızca sitenin kendi arayüzünden okunabilmesi için (`src/server/guard.ts`, `src/trpc/secure-fetch.ts`):

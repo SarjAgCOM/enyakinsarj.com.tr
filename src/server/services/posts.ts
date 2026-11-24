@@ -4,6 +4,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { db } from "../db";
 import { sharePost } from "../social";
 import { CACHE_TAGS } from "./cache-tags";
+import { slugify } from "@/lib/slug";
 
 export const PAGE_SIZE = 12;
 
@@ -119,4 +120,15 @@ export async function publishDuePosts() {
   const results = [];
   for (const { id } of due) results.push({ id, ...(await publishPost(id)) });
   return results.map((r) => ({ id: r.id, shares: r.shares }));
+}
+
+/** Başlıktan (veya verilen slug'dan) benzersiz yazı slug'ı üretir. */
+export async function uniquePostSlug(base: string, excludeId?: string) {
+  const root = slugify(base, 90) || "yazi";
+  let slug = root;
+  for (let i = 2; ; i++) {
+    const hit = await db.post.findUnique({ where: { slug }, select: { id: true } });
+    if (!hit || hit.id === excludeId) return slug;
+    slug = `${root}-${i}`;
+  }
 }
