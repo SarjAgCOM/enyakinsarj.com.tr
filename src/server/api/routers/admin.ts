@@ -11,7 +11,20 @@ import { getCityTable, getPriceTable, getStats, listProviders } from "../../serv
 import { runSync } from "../../services/sync";
 import { CACHE_TAGS } from "../../services/cache-tags";
 import { sarjag } from "../../sarjag/client";
-import { aiConfig, generateBlogPost, generateProviderContent, generateSeoMeta, generateSocialCopy, isAiConfigured } from "../../ai";
+import {
+  AI_PROVIDERS,
+  AI_PROVIDER_INFO,
+  AiError,
+  aiConfig,
+  clearPanelAiSettings,
+  generateBlogPost,
+  generateProviderContent,
+  generateSeoMeta,
+  generateSocialCopy,
+  getPanelAiSettings,
+  savePanelAiSettings,
+  testAiConnection,
+} from "../../ai";
 import { DEFAULT_TEMPLATES, PLATFORMS, renderMessage, saveCredentials, sharePost } from "../../social";
 import { deleteObject, isStorageConfigured } from "../../storage";
 
@@ -226,10 +239,80 @@ const mediaRouter = createTRPCRouter({
 // ─────────────────────────── Yapay zekâ ───────────────────────────
 
 const aiAdminRouter = createTRPCRouter({
-  status: editorProcedure.query(() => {
-    const cfg = aiConfig();
+  status: editorProcedure.query(async () => {
+    const cfg = await aiConfig();
     // limited: anahtarsız ücretsiz katman; yalnızca kısa metinler (SEO, sosyal) üretilebilir, çağrılar sıraya alınır.
-    return { configured: isAiConfigured(), label: cfg?.label ?? null, limited: cfg?.provider === "free" };
+    return { configured: cfg !== null, label: cfg?.label ?? null, limited: cfg?.provider === "free" };
+  }),
+
+  /** Sağlayıcı ayarı (yalnızca yönetici). Anahtarın kendisi hiçbir zaman istemciye gönderilmez. */
+  settings: adminProcedure.query(async () => {
+    const [panel, cfg] = await Promise.all([getPanelAiSettings(), aiConfig()]);
+    return {
+      // "panel": bu ekrandan kaydedildi; "env": ortam değişkenleri kullanılıyor
+      source: panel ? ("panel" as const) : ("env" as const),
+      provider: panel?.provider ?? null,
+      hasKey: Boolean(panel?.apiKey),
+      // Hangi anahtarın kayıtlı olduğunu ayırt etmek için yalnızca son 4 karakter
+      keyHint: panel?.apiKey ? panel.apiKey.slice(-4) : null,
+      model: panel?.model ?? null,
+      baseUrl: panel?.baseUrl ?? null,
+      effective: cfg ? { provider: cfg.provider, label: cfg.label, model: cfg.model, limited: cfg.provider === "free" } : null,
+      providers: AI_PROVIDER_INFO,
+    };
+  }),
+
+  saveSettings: adminProcedure
+    .input(
+      z.object({
+        provider: z.enum(AI_PROVIDERS),
+        // Boş bırakılırsa aynı sağlayıcı için kayıtlı anahtar korunur
+        apiKey: z.string().trim().max(500).optional(),
+        model: z.string().trim().max(200).optional(),
+        baseUrl: z.string().trim().max(500).optional(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const info = AI_PROVIDER_INFO.find((p) => p.id === input.provider)!;
+      const current = await getPanelAiSettings();
+      const apiKey = info.needsKey ? input.apiKey || (current?.provider === input.provider ? current.apiKey : null) : null;
+      if (info.needsKey && !apiKey) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `${info.label} için API anahtarı girin.` });
+      }
+      let baseUrl: string | null = null;
+      if (input.provider === "custom") {
+        let url: URL | null = null;
+        try {
+          url = new URL(input.baseUrl ?? "");
+        } catch {
+          url = null;
+        }
+        const insecureOk = process.env.NODE_ENV !== "production";
+        if (!url || !(url.protocol === "https:" || (insecureOk && url.protocol === "http:"))) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Özel servis için https ile başlayan geçerli bir adres girin." });
+        }
+        if (!input.model) throw new TRPCError({ code: "BAD_REQUEST", message: "Özel servis için model adı girin." });
+        baseUrl = url.toString().replace(/\/+$/, "");
+      }
+      await savePanelAiSettings({ provider: input.provider, apiKey, model: input.model || null, baseUrl });
+      const cfg = await aiConfig();
+      return { label: cfg?.label ?? null, model: cfg?.model ?? null };
+    }),
+
+  /** Panel ayarını siler; ortam değişkenlerine (yoksa anahtarsız servise) dönülür. */
+  resetSettings: adminProcedure.mutation(async () => {
+    await clearPanelAiSettings();
+    return { ok: true };
+  }),
+
+  /** Etkin sağlayıcıya küçük bir istek gönderip anahtarı ve modeli sınar. */
+  test: adminProcedure.mutation(async () => {
+    try {
+      return { ok: true as const, ...(await testAiConnection()) };
+    } catch (e) {
+      if (e instanceof AiError) return { ok: false as const, message: e.message };
+      throw e;
+    }
   }),
 
   generatePost: editorProcedure
@@ -436,7 +519,7 @@ const userRouter = createTRPCRouter({
 
 const dashboardRouter = createTRPCRouter({
   overview: editorProcedure.query(async () => {
-    const [stats, posts, drafts, scheduled, lastRun, recentShares, topPosts] = await Promise.all([
+    const [stats, posts, drafts, scheduled, lastRun, recentShares, topPosts, ai] = await Promise.all([
       getStats(),
       db.post.count({ where: { status: "PUBLISHED" } }),
       db.post.count({ where: { status: "DRAFT" } }),
@@ -449,6 +532,7 @@ const dashboardRouter = createTRPCRouter({
         take: 5,
         select: { id: true, title: true, viewCount: true, slug: true },
       }),
+      aiConfig(),
     ]);
     return {
       stats,
@@ -456,9 +540,9 @@ const dashboardRouter = createTRPCRouter({
       lastRun,
       recentShares,
       topPosts,
-      ai: isAiConfigured(),
+      ai: ai !== null,
       // Etkin sağlayıcı ve model (anahtar gösterilmez)
-      aiLabel: ((c) => (c ? `${c.label} · ${c.model}` : null))(aiConfig()),
+      aiLabel: ai ? `${ai.label} · ${ai.model}` : null,
       storage: isStorageConfigured(),
     };
   }),

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { CircleNotchIcon, SparkleIcon } from "@phosphor-icons/react/ssr";
@@ -60,8 +61,11 @@ export function AiGenerateDialog({
             {status.data?.limited && (
               <span role="alert" className="mt-2 block text-destructive">
                 Şu an anahtarsız ücretsiz servis etkin. Bu servis yalnızca kısa metin (SEO ve sosyal medya) üretebilir, blog
-                yazısı üretemez. Blog üretimi için ortam değişkenlerine ücretsiz bir Gemini veya Groq anahtarı ekleyin
-                (AI_PROVIDER ve AI_API_KEY).
+                yazısı üretemez. Blog üretimi için{" "}
+                <Link href="/admin/yapay-zeka" className="underline underline-offset-4">
+                  Yapay zekâ sayfasından
+                </Link>{" "}
+                ücretsiz bir Gemini veya Groq anahtarı kaydedin.
               </span>
             )}
           </DialogDescription>

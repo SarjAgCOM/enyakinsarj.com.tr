@@ -82,7 +82,7 @@ export default function DashboardPage() {
                   <Check
                     ok={data.ai}
                     label={data.aiLabel ? `Yapay zekâ (${data.aiLabel})` : "Yapay zekâ"}
-                    hint="Yapay zekâ kapalı (AI_PROVIDER=none)"
+                    hint="Kapalı. Yapay zekâ sayfasından sağlayıcı seçin"
                   />
                   <Check ok={data.storage} label="Oracle Object Storage" hint="OCI_* değişkenlerini tanımlayın" />
                 </ul>

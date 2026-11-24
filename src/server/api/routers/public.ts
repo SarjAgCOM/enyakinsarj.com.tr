@@ -121,7 +121,7 @@ export const aiRouter = createTRPCRouter({
           needsLocation: h.useMyLocation && !input.location,
         };
       };
-      if (!isAiSearchAvailable()) return heuristicSearch();
+      if (!(await isAiSearchAvailable())) return heuristicSearch();
       rateLimit(`ai:${ctx.ip}`, 8, 60_000);
       const providers = await listProviders();
       const cityTable = await getCityTable();

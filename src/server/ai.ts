@@ -2,6 +2,8 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
+import { decryptJson, encryptJson } from "./crypto";
+import { db } from "./db";
 import { env } from "./env";
 
 /**
@@ -44,13 +46,24 @@ interface AiConfig {
   baseUrl?: string;
 }
 
-/** Etkin sağlayıcı ayarı; yapılandırma eksikse `null`. */
-export function aiConfig(): AiConfig | null {
-  const e = env();
-  let chosen = e.AI_PROVIDER ?? (e.AI_API_KEY ? "gemini" : e.ANTHROPIC_API_KEY ? "anthropic" : "free");
+export const AI_PROVIDERS = ["free", "gemini", "groq", "openrouter", "custom", "anthropic", "none"] as const;
+export type AiProviderChoice = (typeof AI_PROVIDERS)[number];
+
+/** Sağlayıcı seçimi için ham girdiler; ortam değişkenlerinden veya yönetim panelindeki ayardan gelir. */
+interface AiSource {
+  provider?: AiProviderChoice;
+  apiKey?: string;
+  anthropicKey?: string;
+  model?: string;
+  baseUrl?: string;
+}
+
+/** Ham girdilerden etkin sağlayıcıyı belirler; yapay zekâ kapalıysa veya ayar eksikse `null`. */
+function resolveAiConfig(src: AiSource): AiConfig | null {
+  let chosen = src.provider ?? (src.apiKey ? "gemini" : src.anthropicKey ? "anthropic" : "free");
   if (chosen === "none") return null;
   // Seçilen sağlayıcının anahtarı girilmemişse anahtarsız ücretsiz servise düşülür.
-  if (chosen === "anthropic" ? !e.ANTHROPIC_API_KEY : chosen !== "free" && !e.AI_API_KEY) chosen = "free";
+  if (chosen === "anthropic" ? !src.anthropicKey : chosen !== "free" && !src.apiKey) chosen = "free";
 
   if (chosen === "free") {
     const preset = PRESETS.free;
@@ -58,25 +71,119 @@ export function aiConfig(): AiConfig | null {
   }
 
   if (chosen === "anthropic") {
-    if (!e.ANTHROPIC_API_KEY) return null;
-    const model = e.AI_MODEL?.startsWith("claude") ? e.AI_MODEL : "claude-opus-5-5";
-    return { provider: "anthropic", label: "Claude", apiKey: e.ANTHROPIC_API_KEY, model };
+    const model = src.model?.startsWith("claude") ? src.model : "claude-opus-5-5";
+    return { provider: "anthropic", label: "Claude", apiKey: src.anthropicKey!, model };
   }
 
-  if (!e.AI_API_KEY) return null;
   const preset = chosen === "custom" ? undefined : PRESETS[chosen];
-  const baseUrl = (e.AI_BASE_URL ?? preset?.baseUrl)?.replace(/\/+$/, "");
-  // AI_MODEL'de Claude için kalmış bir değer varsa bu sağlayıcıda geçersizdir; sağlayıcının varsayılanı kullanılır.
-  const model = e.AI_MODEL && !e.AI_MODEL.startsWith("claude") ? e.AI_MODEL : preset?.model;
+  const baseUrl = (src.baseUrl ?? preset?.baseUrl)?.replace(/\/+$/, "");
+  // Modelde Claude için kalmış bir değer varsa bu sağlayıcıda geçersizdir; sağlayıcının varsayılanı kullanılır.
+  const model = src.model && !src.model.startsWith("claude") ? src.model : preset?.model;
   if (!baseUrl || !model) return null;
-  return { provider: chosen, label: preset?.label ?? "Özel servis", apiKey: e.AI_API_KEY, model, baseUrl };
+  return { provider: chosen, label: preset?.label ?? "Özel servis", apiKey: src.apiKey!, model, baseUrl };
 }
 
-export const isAiConfigured = () => aiConfig() !== null;
+// ── Yönetim panelinden girilen ayar (Setting tablosu, anahtar şifreli). Ortam değişkenlerinin önüne geçer. ──
+
+const SETTING_KEY = "ai";
+
+interface StoredAiSettings {
+  provider: AiProviderChoice;
+  /** encryptJson ile şifrelenmiş API anahtarı */
+  key?: string | null;
+  model?: string | null;
+  baseUrl?: string | null;
+}
+
+export interface PanelAiSettings {
+  provider: AiProviderChoice;
+  apiKey: string | null;
+  model: string | null;
+  baseUrl: string | null;
+}
+
+let panelCache: { value: PanelAiSettings | null; at: number } | undefined;
+const PANEL_CACHE_MS = 30_000;
+
+/** Panelden kaydedilmiş ayar; yoksa `null`. Kısa süreli bellek içi önbellek kullanır. */
+export async function getPanelAiSettings(): Promise<PanelAiSettings | null> {
+  if (panelCache && Date.now() - panelCache.at < PANEL_CACHE_MS) return panelCache.value;
+  let value: PanelAiSettings | null = null;
+  try {
+    const row = await db.setting.findUnique({ where: { key: SETTING_KEY } });
+    const stored = row?.value as StoredAiSettings | null | undefined;
+    if (stored && (AI_PROVIDERS as readonly string[]).includes(stored.provider)) {
+      value = {
+        provider: stored.provider,
+        apiKey: decryptJson<string>(stored.key),
+        model: stored.model?.trim() || null,
+        baseUrl: stored.baseUrl?.trim() || null,
+      };
+    }
+  } catch (e) {
+    // Veritabanına ulaşılamazsa ortam değişkenleriyle devam edilir.
+    console.error("Yapay zekâ ayarı okunamadı:", e);
+  }
+  panelCache = { value, at: Date.now() };
+  return value;
+}
+
+export async function savePanelAiSettings(input: PanelAiSettings) {
+  const value: StoredAiSettings = {
+    provider: input.provider,
+    key: input.apiKey ? encryptJson(input.apiKey) : null,
+    model: input.model,
+    baseUrl: input.baseUrl,
+  };
+  await db.setting.upsert({ where: { key: SETTING_KEY }, create: { key: SETTING_KEY, value: { ...value } }, update: { value: { ...value } } });
+  panelCache = undefined;
+}
+
+export async function clearPanelAiSettings() {
+  await db.setting.deleteMany({ where: { key: SETTING_KEY } });
+  panelCache = undefined;
+}
+
+function envAiConfig(): AiConfig | null {
+  const e = env();
+  return resolveAiConfig({
+    provider: e.AI_PROVIDER,
+    apiKey: e.AI_API_KEY,
+    anthropicKey: e.ANTHROPIC_API_KEY,
+    model: e.AI_MODEL,
+    baseUrl: e.AI_BASE_URL,
+  });
+}
+
+/** Etkin sağlayıcı ayarı: panelde kayıt varsa o, yoksa ortam değişkenleri. Kapalıysa `null`. */
+export async function aiConfig(): Promise<AiConfig | null> {
+  const panel = await getPanelAiSettings();
+  if (!panel) return envAiConfig();
+  return resolveAiConfig({
+    provider: panel.provider,
+    apiKey: panel.provider === "anthropic" ? undefined : (panel.apiKey ?? undefined),
+    anthropicKey: panel.provider === "anthropic" ? (panel.apiKey ?? undefined) : undefined,
+    model: panel.model ?? undefined,
+    baseUrl: panel.baseUrl ?? undefined,
+  });
+}
+
+/** Panel ekranı için sağlayıcı listesi (anahtarın nereden alınacağı ve varsayılan model). */
+export const AI_PROVIDER_INFO: { id: AiProviderChoice; label: string; needsKey: boolean; keyUrl?: string; defaultModel?: string; note: string }[] = [
+  { id: "gemini", label: "Google Gemini", needsKey: true, keyUrl: "https://aistudio.google.com/apikey", defaultModel: PRESETS.gemini.model, note: "Ücretsiz katmanı var. Blog üretimi ve arama için önerilir." },
+  { id: "groq", label: "Groq", needsKey: true, keyUrl: "https://console.groq.com/keys", defaultModel: PRESETS.groq.model, note: "Ücretsiz katmanı var, çok hızlı. Günlük istek ve jeton sınırı düşük." },
+  { id: "openrouter", label: "OpenRouter", needsKey: true, keyUrl: "https://openrouter.ai/keys", defaultModel: PRESETS.openrouter.model, note: "Adı “:free” ile biten modeller ücretsizdir; liste sık değişir." },
+  { id: "free", label: "Anahtarsız ücretsiz servis", needsKey: false, defaultModel: "GPT-OSS 20B", note: "Hesap gerektirmez. Yalnızca SEO ve sosyal medya metni üretir; blog yazısı ve yapay zekâ destekli arama yok." },
+  { id: "anthropic", label: "Claude (Anthropic)", needsKey: true, keyUrl: "https://console.anthropic.com/settings/keys", defaultModel: "claude-opus-5-5", note: "Ücretli. En yüksek yazı kalitesi." },
+  { id: "custom", label: "Özel (OpenAI uyumlu)", needsKey: true, note: "Kendi uç noktanız: adres ve model adı zorunludur." },
+  { id: "none", label: "Kapalı", needsKey: false, note: "Yapay zekâ özellikleri kapatılır; arama kelime eşleştirmeyle çalışır." },
+];
+
+export const isAiConfigured = async () => (await aiConfig()) !== null;
 
 /** Anahtarsız katman 45 saniyede 1 yanıt verdiği için ziyaretçi aramalarında kullanılmaz. */
-export const isAiSearchAvailable = () => {
-  const cfg = aiConfig();
+export const isAiSearchAvailable = async () => {
+  const cfg = await aiConfig();
   return cfg !== null && cfg.provider !== "free";
 };
 
@@ -111,14 +218,14 @@ interface StructuredOptions<S extends z.ZodType> {
 const FREE_MAX_OUTPUT_TOKENS = 1500;
 
 async function structured<S extends z.ZodType>(opts: StructuredOptions<S>): Promise<z.infer<S>> {
-  const cfg = aiConfig();
+  const cfg = await aiConfig();
   if (!cfg) throw new AiError(NOT_CONFIGURED);
   // Uzun içerik anahtarsız katmanın sınırına sığmaz; dakikalarca bekletip kesik yanıt almak yerine hemen bildirilir.
   if (cfg.provider === "free" && (opts.maxTokens ?? 16000) > 4000) {
     throw new AiError(
       "Anahtarsız ücretsiz servis yanıt başına yaklaşık 500 kelimeyle sınırlı olduğu için blog yazısı gibi uzun içerik üretemez. " +
-        "Ücretsiz bir Gemini (aistudio.google.com/apikey) veya Groq (console.groq.com/keys) anahtarı alıp ortam değişkenlerine " +
-        "AI_PROVIDER ve AI_API_KEY olarak ekleyin.",
+        "Ücretsiz bir Gemini (aistudio.google.com/apikey) veya Groq (console.groq.com/keys) anahtarı alıp " +
+        "yönetim panelindeki Yapay zekâ sayfasına girin.",
     );
   }
   return cfg.provider === "anthropic" ? viaAnthropic(cfg, opts) : viaOpenAiCompatible(cfg, opts);
@@ -126,18 +233,19 @@ async function structured<S extends z.ZodType>(opts: StructuredOptions<S>): Prom
 
 // ─────────────────────────── Claude ───────────────────────────
 
-let client: Anthropic | undefined;
+// İstemci anahtara göre önbelleğe alınır; panelden anahtar değişince yenisi oluşturulur.
+let client: { key: string; sdk: Anthropic } | undefined;
 
 // Sunucu tarafı ret (refusal) yedeği desteklenen modeller
 const FALLBACK_MODELS = new Set(["claude-fable-5-2", "claude-fable-5-1", "claude-opus-5-5", "claude-opus-5", "claude-sonnet-5-5"]);
 
 async function viaAnthropic<S extends z.ZodType>(cfg: AiConfig, opts: StructuredOptions<S>): Promise<z.infer<S>> {
-  client ??= new Anthropic({ apiKey: cfg.apiKey });
+  if (client?.key !== cfg.apiKey) client = { key: cfg.apiKey, sdk: new Anthropic({ apiKey: cfg.apiKey }) };
   const withFallback = FALLBACK_MODELS.has(cfg.model);
 
   let response;
   try {
-    response = await client.beta.messages.parse({
+    response = await client.sdk.beta.messages.parse({
       model: cfg.model,
       max_tokens: opts.maxTokens ?? 16000,
       system: opts.system,
@@ -147,7 +255,7 @@ async function viaAnthropic<S extends z.ZodType>(cfg: AiConfig, opts: Structured
     });
   } catch (e) {
     if (e instanceof Anthropic.RateLimitError) throw new AiError("Yapay zekâ servisi şu an yoğun, biraz sonra tekrar deneyin.");
-    if (e instanceof Anthropic.AuthenticationError) throw new AiError("ANTHROPIC_API_KEY geçersiz.");
+    if (e instanceof Anthropic.AuthenticationError) throw new AiError("Claude API anahtarı geçersiz.");
     if (e instanceof Anthropic.APIError) throw new AiError(`Yapay zekâ hatası (${e.status}): ${e.message}`);
     throw e;
   }
@@ -247,8 +355,8 @@ async function viaOpenAiCompatible<S extends z.ZodType>(cfg: AiConfig, opts: Str
         jsonMode = false;
         continue;
       }
-      if (r.status === 401 || r.status === 403) throw new AiError(`${cfg.label}: AI_API_KEY geçersiz veya yetkisiz.`);
-      if (r.status === 404) throw new AiError(`${cfg.label}: "${cfg.model}" modeli bulunamadı. AI_MODEL değerini kontrol edin.`);
+      if (r.status === 401 || r.status === 403) throw new AiError(`${cfg.label}: API anahtarı geçersiz veya yetkisiz.`);
+      if (r.status === 404) throw new AiError(`${cfg.label}: "${cfg.model}" modeli bulunamadı. Model adını kontrol edin.`);
       if (r.status === 429 || r.status === 413) {
         throw new AiError(`${cfg.label} kotası veya hız sınırı doldu. Biraz sonra yeniden deneyin ya da daha kısa içerik isteyin.`);
       }
@@ -420,4 +528,22 @@ export async function generateProviderContent(input: { name: string; website?: s
     prompt: `Şarj ağı: ${input.name}\nWeb sitesi: ${input.website ?? "-"}\n\nGüncel veriler:\n${input.stats}`,
   });
   return out.content;
+}
+
+// ─────────────────────────── Bağlantı testi (yönetim paneli) ───────────────────────────
+
+/** Etkin sağlayıcıya küçük bir istek gönderir; anahtar, model ve yanıt biçimi birlikte sınanır. */
+export async function testAiConnection() {
+  const cfg = await aiConfig();
+  if (!cfg) throw new AiError(NOT_CONFIGURED);
+  const started = Date.now();
+  const out = await structured({
+    effort: "low",
+    maxTokens: 1000,
+    timeoutMs: 90_000,
+    schema: z.object({ reply: z.string().describe("Tek kısa Türkçe cümle") }),
+    system: "Sen bir bağlantı testisin. Kısa ve Türkçe yanıt ver.",
+    prompt: "Elektrikli araç şarjı hakkında tek cümlelik bir bilgi yaz.",
+  });
+  return { provider: cfg.label, model: cfg.model, ms: Date.now() - started, reply: out.reply.slice(0, 300) };
 }

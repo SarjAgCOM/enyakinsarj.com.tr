@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowSquareOutIcon, FileTextIcon, FolderIcon, ImageIcon, PlugChargingIcon, ShareNetworkIcon, SignOutIcon, SquaresFourIcon, UsersIcon } from "@phosphor-icons/react/ssr";
+import { ArrowSquareOutIcon, FileTextIcon, FolderIcon, ImageIcon, PlugChargingIcon, ShareNetworkIcon, SignOutIcon, SparkleIcon, SquaresFourIcon, UsersIcon } from "@phosphor-icons/react/ssr";
 import { Button } from "@/components/ui/button";
 import { LogoMark } from "@/components/site/logo";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,7 @@ const NAV = [
   { href: "/admin/medya", label: "Medya", icon: ImageIcon },
   { href: "/admin/sosyal", label: "Sosyal medya", icon: ShareNetworkIcon },
   { href: "/admin/istasyonlar", label: "Şarj ağları ve senkron", icon: PlugChargingIcon },
+  { href: "/admin/yapay-zeka", label: "Yapay zekâ", icon: SparkleIcon, adminOnly: true },
   { href: "/admin/kullanicilar", label: "Kullanıcılar", icon: UsersIcon, adminOnly: true },
 ];
 
