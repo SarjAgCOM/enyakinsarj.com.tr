@@ -106,9 +106,58 @@ export function parseFeed(xml: string, maxItems = 60): FeedItem[] {
   return items;
 }
 
+export interface ForumPost {
+  /** Konuyu açan iletinin düz metni */
+  text: string;
+  /** Konunun açıldığı tarih (akıştaki tarih son yanıta ait olabilir) */
+  publishedAt: Date | null;
+}
+
+type LdNode = Record<string, unknown>;
+
+function findLdNode(value: unknown, type: string, depth: number): LdNode | null {
+  if (depth > 6 || !value || typeof value !== "object") return null;
+  if (Array.isArray(value)) {
+    for (const v of value.slice(0, 50)) {
+      const hit = findLdNode(v, type, depth + 1);
+      if (hit) return hit;
+    }
+    return null;
+  }
+  const node = value as LdNode;
+  const t = node["@type"];
+  if (t === type || (Array.isArray(t) && t.includes(type))) return node;
+  for (const key of ["mainEntity", "@graph", "mainEntityOfPage"]) {
+    const hit = findLdNode(node[key], type, depth + 1);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+/**
+ * Forum konusu sayfalarında (XenForo, Discourse vb.) konuyu açan iletiyi JSON-LD `DiscussionForumPosting`
+ * kaydından okur. Bu sayfalarda metin <p> yerine satır sonlarıyla yazıldığı için paragraf taraması boş döner.
+ * Sayfa bir forum konusu değilse null döner.
+ */
+export function extractForumPost(html: string): ForumPost | null {
+  for (const m of html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) {
+    let data: unknown;
+    try {
+      data = JSON.parse(m[1]);
+    } catch {
+      continue;
+    }
+    const node = findLdNode(data, "DiscussionForumPosting", 0);
+    if (!node) continue;
+    const raw = typeof node.text === "string" ? node.text : typeof node.articleBody === "string" ? node.articleBody : "";
+    return { text: htmlToText(raw), publishedAt: parseDate(typeof node.datePublished === "string" ? node.datePublished : "") };
+  }
+  return null;
+}
+
 /**
  * Haber sayfasından ana metni çıkarır (yalnızca yapay zekâya bilgi kaynağı olarak verilir, yayınlanmaz).
- * Önce JSON-LD `articleBody`, yoksa <article> / <main> içindeki paragraflar kullanılır.
+ * Önce JSON-LD `articleBody`, sonra forum konusunun ilk iletisi, yoksa <article> / <main> içindeki paragraflar kullanılır.
  */
 export function extractArticleText(html: string, maxChars = 6000): string {
   const ld = /"articleBody"\s*:\s*"((?:[^"\\]|\\.){200,})"/.exec(html);
@@ -120,6 +169,8 @@ export function extractArticleText(html: string, maxChars = 6000): string {
       // JSON-LD bozuksa paragraflara düşülür
     }
   }
+  const forum = extractForumPost(html);
+  if (forum && forum.text.length >= 80) return forum.text.slice(0, maxChars);
   const cleaned = html
     .replace(/<!--[\s\S]*?-->/g, " ")
     .replace(/<(script|style|noscript|svg|iframe|nav|header|footer|aside|form|figure)\b[\s\S]*?<\/\1>/gi, " ");

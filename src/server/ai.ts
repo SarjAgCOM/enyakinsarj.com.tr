@@ -568,6 +568,9 @@ export async function generateNewsPost(input: {
       "- Kaynak metindeki cümleleri, cümle yapılarını ve ayırt edici ifadeleri KOPYALAMA; yeniden kur. Başlık da özgün olmalı.\n" +
       "- Yalnızca kaynakta geçen olguları kullan. Rakam, tarih, fiyat, alıntı veya isim UYDURMA. Emin olmadığın şeyi yazma.\n" +
       "- Birinin sözünü aktarıyorsan dolaylı anlatım kullan ve kimin söylediğini belirt.\n" +
+      "- Kaynak bir forum yazısı ya da birinci ağızdan yazılmış bir görüş olabilir. Yazarın kişisel yorumunu, tahminini " +
+      "veya deneyimini kesin bilgi gibi sunma; yalnızca olguları haberleştir, yorumları 'değerlendiriliyor' gibi " +
+      "ifadelerle aktar. Metin yalnızca bir soru, tanıtım/ilan ya da tartışma çağrısıysa relevant=false döndür.\n" +
       "- Kaynak yayının adını metinde anma ve 'Kaynak' satırı ekleme; atıf sistem tarafından ayrıca eklenir.\n" +
       "- Uzunluk: eldeki bilgi kadar, 250 ile 450 kelime arası. Bilgi azsa kısa yaz, doldurma yapma.\n" +
       "- Biçim: ilk paragraf haberin özünü versin; ardından 2 veya 3 adet H2 başlık (## ) altında ayrıntılar. H1 kullanma.\n" +

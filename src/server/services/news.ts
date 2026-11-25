@@ -5,7 +5,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { db } from "../db";
 import { AiError, generateNewsPost, isAiLongFormAvailable } from "../ai";
 import { publishPost, revalidatePosts, uniquePostSlug } from "./posts";
-import { extractArticleText, isEvRelated, isSameStory, parseFeed, titleTokens } from "@/lib/feed";
+import { extractArticleText, extractForumPost, isEvRelated, isSameStory, parseFeed, titleTokens } from "@/lib/feed";
 
 /**
  * Haber akışı: Türkiye'deki otomobil / teknoloji yayınlarının RSS akışlarından elektrikli araç haberlerini
@@ -63,6 +63,8 @@ const DEFAULT_SOURCES: { name: string; feedUrl: string; enabled: boolean }[] = [
   { name: "DonanımHaber", feedUrl: "https://www.donanimhaber.com/rss/tum/", enabled: false },
   { name: "Webtekno", feedUrl: "https://www.webtekno.com/rss.xml", enabled: false },
   { name: "Enerji Günlüğü", feedUrl: "https://www.enerjigunlugu.net/rss", enabled: false },
+  // Forum (XenForo): akış son yanıt tarihine göre sıralanır, bkz. generateFromNewsItem içindeki `skipStale`.
+  { name: "Şarj Hattı", feedUrl: "https://sarjhatti.com/forums/-/index.rss", enabled: true },
 ];
 
 /** Tablo boşsa varsayılan kaynakları ekler. */
@@ -223,15 +225,25 @@ const clip = (s: string, max: number) => (s.length > max ? `${s.slice(0, max - 1
 /**
  * Kuyruktaki bir haberden özgün yazı üretir. `publish` true ise yayınlar (ve otomatik paylaşım açıksa paylaşır),
  * değilse taslak olarak bırakır.
+ *
+ * `skipStale`: forum akışlarında tarih son yanıta aittir, yani aylar önce açılmış bir konu yeni bir yanıtla
+ * "yeni" görünebilir. Otomatik döngü bu konuları atlar; editör elle ürettiğinde karar ona bırakılır.
  */
-export async function generateFromNewsItem(itemId: string, opts: { publish: boolean; authorId?: string }) {
+export async function generateFromNewsItem(itemId: string, opts: { publish: boolean; authorId?: string; skipStale?: boolean }) {
   const item = await db.newsItem.findUniqueOrThrow({ where: { id: itemId }, include: { source: true } });
   if (item.postId) return { status: "GENERATED" as const, postId: item.postId };
 
   // Haber sayfasının metni yalnızca yapay zekâya bilgi olarak verilir; okunamazsa akıştaki özetle yetinilir.
-  const body = await fetchText(item.url, 1_500_000)
-    .then((html) => extractArticleText(html))
-    .catch(() => "");
+  const html = await fetchText(item.url, 1_500_000).catch(() => "");
+  if (opts.skipStale) {
+    const opened = extractForumPost(html)?.publishedAt;
+    if (opened && Date.now() - opened.getTime() > MAX_AGE_MS) {
+      const note = "Eski konu (yeni yanıtla öne çıkmış)";
+      await db.newsItem.update({ where: { id: item.id }, data: { status: "SKIPPED", note } });
+      return { status: "SKIPPED" as const, note };
+    }
+  }
+  const body = extractArticleText(html);
   if (body.length + (item.summary?.length ?? 0) < 120) {
     await db.newsItem.update({ where: { id: item.id }, data: { status: "SKIPPED", note: "Yeterli bilgi yok" } });
     return { status: "SKIPPED" as const, note: "Yeterli bilgi yok" };
@@ -305,7 +317,7 @@ export async function runNewsCycle() {
 
     const next = await db.newsItem.findFirst({ where: { status: "NEW" }, orderBy: [{ publishedAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }] });
     if (!next) return { fetched, generated: null };
-    const generated = await generateFromNewsItem(next.id, { publish: settings.autoPublish }).catch((e: Error) => ({ error: e.message }));
+    const generated = await generateFromNewsItem(next.id, { publish: settings.autoPublish, skipStale: true }).catch((e: Error) => ({ error: e.message }));
     return { fetched, generated };
   } finally {
     running = false;
